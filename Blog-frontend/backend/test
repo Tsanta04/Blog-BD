@@ -1,0 +1,310 @@
+// === FILE: composer.json ===
+{
+  "name": "tsanta/mini-blog-backend",
+  "require": {
+    "gabordemooij/redbean": "^0.9.6",
+    "predis/predis": "^1.1",
+    "mongodb/mongodb": "^1.15",
+    "vlucas/phpdotenv": "^5.5"
+  },
+  "autoload": {
+    "psr-4": { "App\\": "src/" }
+  }
+}
+
+
+// === FILE: .env.example ===
+# Postgres
+DB_DRIVER=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_NAME=mini_blog
+DB_USER=postgres
+DB_PASS=secret
+
+# Redis (predis)
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_TTL=86400
+
+# Mongo
+MONGO_URI=mongodb://127.0.0.1:27017
+MONGO_DB=mini_blog
+
+# App
+APP_KEY=changeme_random_string
+
+
+// === FILE: public/index.php ===
+<?php
+require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../src/bootstrap.php';
+
+use App\Controllers\AuthController;
+use App\Controllers\PostController;
+use App\Controllers\CommentController;
+use App\Controllers\LikeController;
+use App\Middleware\AuthMiddleware;
+
+$method = $_SERVER['REQUEST_METHOD'];
+$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$uri = rtrim($uri, '/');
+
+// simple routing (for demo purposes)
+if ($uri === '/api/register' && $method === 'POST') {
+    (new AuthController($rb, $redis))->register();
+    exit;
+}
+
+if ($uri === '/api/login' && $method === 'POST') {
+    (new AuthController($rb, $redis))->login();
+    exit;
+}
+
+// posts list & create
+if ($uri === '/api/posts') {
+    if ($method === 'GET') { (new PostController($rb, $mongo, $redis))->index(); exit; }
+    if ($method === 'POST') { AuthMiddleware::guard($redis, function($userId) use($rb,$mongo,$redis){ (new PostController($rb,$mongo,$redis))->create($userId); }); exit; }
+}
+
+// post details
+if (preg_match('#^/api/posts/(\d+)$#', $uri, $m) && $method === 'GET') {
+    $id = intval($m[1]); (new PostController($rb,$mongo,$redis))->show($id); exit;
+}
+
+// comments
+if (preg_match('#^/api/posts/(\d+)/comments$#', $uri, $m) && $method === 'POST') {
+    $postId = intval($m[1]); AuthMiddleware::guard($redis, function($userId) use($rb,$postId){ (new CommentController($rb))->create($userId,$postId); }); exit;
+}
+
+// like
+if (preg_match('#^/api/posts/(\d+)/like$#', $uri, $m) && $method === 'POST') {
+    $postId = intval($m[1]); AuthMiddleware::guard($redis, function($userId) use($rb,$redis,$postId){ (new LikeController($rb,$redis))->toggle($userId,$postId); }); exit;
+}
+
+http_response_code(404);
+echo json_encode(["error" => "Not found"]);
+
+
+// === FILE: src/bootstrap.php ===
+<?php
+use Dotenv\Dotenv;
+use Predis\Client as PredisClient;
+use MongoDB\Client as MongoClient;
+
+$dotenv = Dotenv::createImmutable(__DIR__ . '/../');
+$dotenv->safeLoad();
+
+// RedBean (Postgres)
+R::setup(
+    sprintf('%s:host=%s;port=%s;dbname=%s', $_ENV['DB_DRIVER'], $_ENV['DB_HOST'], $_ENV['DB_PORT'], $_ENV['DB_NAME']),
+    $_ENV['DB_USER'],
+    $_ENV['DB_PASS']
+);
+R::ext('xdispense', function($type){ return R::dispense($type); });
+$rb = R::getRedBean(); // convenience variable for controllers
+
+// Predis
+$redis = new PredisClient([
+    'scheme' => 'tcp',
+    'host' => $_ENV['REDIS_HOST'] ?? '127.0.0.1',
+    'port' => $_ENV['REDIS_PORT'] ?? 6379,
+]);
+
+// Mongo
+$mongo = (new MongoClient($_ENV['MONGO_URI']))->selectDatabase($_ENV['MONGO_DB']);
+
+header('Content-Type: application/json; charset=utf-8');
+
+
+// === FILE: src/Utils/Response.php ===
+<?php
+namespace App\Utils;
+
+class Response {
+    public static function json($data, $code = 200) {
+        http_response_code($code);
+        echo json_encode($data);
+        exit;
+    }
+}
+
+
+// === FILE: src/Middleware/AuthMiddleware.php ===
+<?php
+namespace App\Middleware;
+
+use App\Utils\Response;
+
+class AuthMiddleware {
+    public static function guard($redis, $callback) {
+        $headers = getallheaders();
+        $token = $headers['Authorization'] ?? ($headers['authorization'] ?? null);
+        if (!$token) return Response::json(['error' => 'Unauthorized'], 401);
+        $token = preg_replace('/^Bearer\s+/i','',$token);
+        $userId = $redis->get('session:token:' . $token);
+        if (!$userId) return Response::json(['error' => 'Unauthorized or session expired'], 401);
+        $callback(intval($userId));
+    }
+}
+
+
+// === FILE: src/Controllers/AuthController.php ===
+<?php
+namespace App\Controllers;
+
+use App\Utils\Response;
+
+class AuthController {
+    private $rb; private $redis;
+    public function __construct($rb, $redis) { $this->rb = $rb; $this->redis = $redis; }
+
+    private function body() { return json_decode(file_get_contents('php://input'), true); }
+
+    public function register() {
+        $b = $this->body();
+        if (empty($b['email']) || empty($b['password']) || empty($b['name'])) return Response::json(['error'=>'Missing fields'], 400);
+        $existing = R::findOne('user', ' email = ? ', [$b['email']]);
+        if ($existing) return Response::json(['error'=>'Email exists'], 409);
+        $u = R::dispense('user');
+        $u->name = $b['name']; $u->email = $b['email']; $u->password = password_hash($b['password'], PASSWORD_DEFAULT); $u->created_at = date('c');
+        $id = R::store($u);
+        Response::json(['message'=>'Registered','id'=>$id], 201);
+    }
+
+    public function login() {
+        $b = $this->body();
+        if (empty($b['email']) || empty($b['password'])) return Response::json(['error'=>'Missing fields'], 400);
+        $user = R::findOne('user',' email = ? ', [$b['email']]);
+        if (!$user || !password_verify($b['password'], $user->password)) return Response::json(['error'=>'Invalid credentials'], 401);
+        $token = bin2hex(random_bytes(16));
+        $this->redis->setex('session:token:' . $token, intval($_ENV['REDIS_TTL'] ?? 86400), $user->id);
+        Response::json(['token' => $token, 'user' => ['id'=>$user->id,'name'=>$user->name,'email'=>$user->email]]);
+    }
+}
+
+
+// === FILE: src/Controllers/PostController.php ===
+<?php
+namespace App\Controllers;
+
+use App\Utils\Response;
+
+class PostController {
+    private $rb; private $mongo; private $redis;
+    public function __construct($rb, $mongo, $redis){ $this->rb=$rb; $this->mongo=$mongo; $this->redis=$redis; }
+
+    private function body(){ return json_decode(file_get_contents('php://input'), true); }
+
+    // GET /api/posts
+    public function index(){
+        $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 20;
+        $posts = R::findAll('post', ' ORDER BY created_at DESC LIMIT ? ', [$limit]);
+        $result = [];
+        foreach ($posts as $p){
+            $meta = $this->mongo->selectCollection('post_metadata')->findOne(['post_id' => intval($p->id)]);
+            $views = $this->redis->get('post:'.$p->id.':views') ?? ($meta['views']['today'] ?? 0);
+            $result[] = ['id'=>$p->id,'title'=>$p->title,'excerpt'=>mb_substr($p->content,0,200),'user_id'=>$p->user_id,'created_at'=>$p->created_at,'views'=>intval($views)];
+        }
+        Response::json(['data'=>$result]);
+    }
+
+    // POST /api/posts (protected)
+    public function create($userId){
+        $b = $this->body(); if (empty($b['title']) || empty($b['content'])) return Response::json(['error'=>'Missing fields'],400);
+        $post = R::dispense('post'); $post->title = $b['title']; $post->content=$b['content']; $post->user_id=$userId; $post->created_at = date('c');
+        $id = R::store($post);
+        // save tags & metadata in mongo
+        $meta = ['post_id'=>intval($id),'tags'=>$b['tags'] ?? [], 'views'=>['today'=>0],'updated_at'=>new \MongoDB\BSON\UTCDateTime((new \DateTime())->getTimestamp()*1000)];
+        $this->mongo->selectCollection('post_metadata')->insertOne($meta);
+        Response::json(['message'=>'created','id'=>$id],201);
+    }
+
+    // GET /api/posts/{id}
+    public function show($id){
+        $p = R::load('post', $id); if (!$p->id) return Response::json(['error'=>'Not found'],404);
+        // increment view counter in Redis
+        $this->redis->incr('post:'.$id.':views');
+        $meta = $this->mongo->selectCollection('post_metadata')->findOne(['post_id'=>intval($id)]);
+        // comments
+        $comments = R::find('comment', ' post_id = ? ORDER BY created_at DESC ', [$id]);
+        $cdata = [];
+        foreach ($comments as $c){ $cdata[]=['id'=>$c->id,'content'=>$c->content,'user_id'=>$c->user_id,'created_at'=>$c->created_at]; }
+        Response::json(['post'=>['id'=>$p->id,'title'=>$p->title,'content'=>$p->content,'created_at'=>$p->created_at,'user_id'=>$p->user_id,'tags'=>$meta['tags'] ?? [],'views'=>intval($this->redis->get('post:'.$id.':views') ?? 0),'comments'=>$cdata]]);
+    }
+}
+
+
+// === FILE: src/Controllers/CommentController.php ===
+<?php
+namespace App\Controllers;
+
+use App\Utils\Response;
+
+class CommentController {
+    public function create($userId, $postId){
+        $b = json_decode(file_get_contents('php://input'), true);
+        if (empty($b['content'])) return Response::json(['error'=>'Missing content'],400);
+        $p = R::load('post', $postId); if (!$p->id) return Response::json(['error'=>'Post not found'],404);
+        $c = R::dispense('comment'); $c->content = $b['content']; $c->post_id=$postId; $c->user_id=$userId; $c->created_at=date('c');
+        $id = R::store($c);
+        Response::json(['message'=>'Comment added','id'=>$id],201);
+    }
+}
+
+
+// === FILE: src/Controllers/LikeController.php ===
+<?php
+namespace App\Controllers;
+
+use App\Utils\Response;
+
+class LikeController {
+    private $rb; private $redis;
+    public function __construct($rb, $redis){ $this->rb=$rb; $this->redis=$redis; }
+
+    // toggle like: if liked -> unlike, else like
+    public function toggle($userId, $postId){
+        $p = R::load('post', $postId); if (!$p->id) return Response::json(['error'=>'Post not found'],404);
+        // check SQL join table
+        $existing = R::findOne('likes', ' user_id = ? AND post_id = ? ', [$userId, $postId]);
+        if ($existing) {
+            R::exec('DELETE FROM likes WHERE user_id = ? AND post_id = ?', [$userId, $postId]);
+            // decrement redis counter
+            $this->redis->decr('post:'.$postId.':likes');
+            return Response::json(['message'=>'unliked']);
+        }
+        // insert
+        R::exec('INSERT INTO likes (user_id, post_id, created_at) VALUES (?, ?, ?)', [$userId, $postId, date('c')]);
+        $this->redis->incr('post:'.$postId.':likes');
+        return Response::json(['message'=>'liked']);
+    }
+}
+
+
+// === FILE: README.md ===
+# Mini Blog Backend (PHP + RedBean + Postgres + Mongo + Redis)
+
+Ce dépôt contient un backend minimal pour un mini-blog. Installer :
+
+1. Copier `.env.example` -> `.env` et adapter les variables.
+2. Composer install : `composer install`.
+3. Lancer Postgres, Redis, MongoDB.
+4. Configurer votre serveur web (DocumentRoot = `public/`) ou `php -S localhost:8000 -t public` pour dev.
+
+Notes : RedBean crée les tables automatiquement si elles n'existent pas. Pour Postgres, vous pouvez créer manuellement la table `likes` si nécessaire :
+
+```sql
+CREATE TABLE likes (
+  user_id integer NOT NULL,
+  post_id integer NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  PRIMARY KEY (user_id, post_id)
+);
+```
+
+---
+
+// === FILE: src/.gitkeep ===
+
+// End of files
