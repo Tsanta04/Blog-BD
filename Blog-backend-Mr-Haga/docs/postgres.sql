@@ -18,7 +18,47 @@ CREATE TABLE posts (
     content TEXT NOT NULL,
     user_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT now(),
+    update_at TIMESTAMP DEFAULT now(),    
     CONSTRAINT fk_posts_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ====================
+-- TABLE: Tags
+-- ====================
+CREATE TABLE tags (
+    id SERIAL PRIMARY KEY,
+    tags VARCHAR(200) NOT NULL,
+);
+
+-- ====================
+-- TABLE: Type medias
+-- ====================
+CREATE TABLE tags (
+    id SERIAL PRIMARY KEY,
+    type_ VARCHAR(200) NOT NULL,
+);
+
+-- ====================
+-- TABLE: Posts_tags
+-- ====================
+CREATE TABLE posts_tags (
+    id SERIAL PRIMARY KEY,
+    tag_id INT NOT NULL,
+    post_id INT NOT NULL,
+    CONSTRAINT fk_posts_tags FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_tags_ FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE NULL    
+);
+
+-- ====================
+-- TABLE: Media
+-- ====================
+CREATE TABLE medias (
+    id SERIAL PRIMARY KEY,
+    path_name VARCHAR(200) NOT NULL,
+    post_id INT NOT NULL,
+    type_id INT NOT NULL,    
+    CONSTRAINT fk_posts_medias FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_types_medias FOREIGN KEY (type_id) REFERENCES types_medias(id) ON DELETE NULL
 );
 
 -- ====================
@@ -38,6 +78,18 @@ CREATE TABLE comments (
 -- TABLE: likes (relation n-n)
 -- ====================
 CREATE TABLE likes (
+    user_id INT NOT NULL,
+    post_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT now(),
+    PRIMARY KEY (user_id, post_id),
+    CONSTRAINT fk_likes_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_likes_post FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+);
+
+-- ====================
+-- TABLE: views (relation n-n)
+-- ====================
+CREATE TABLE views (
     user_id INT NOT NULL,
     post_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT now(),
