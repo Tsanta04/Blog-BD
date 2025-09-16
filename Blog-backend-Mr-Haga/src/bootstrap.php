@@ -22,9 +22,6 @@
         'port' => isset($_ENV['REDIS_PORT']) ? $_ENV['REDIS_PORT'] : 6379,
     ]);
 
-    // Mongo
-    $mongo = (new MongoClient($_ENV['MONGO_URI']))->selectDatabase($_ENV['MONGO_DB']);
-
     header('Content-Type: application/json; charset=utf-8');
 
 ?>
