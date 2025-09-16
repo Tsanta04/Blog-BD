@@ -6,7 +6,7 @@
     class AuthMiddleware {
         public static function guard($redis, $callback) {
             $headers = getallheaders();
-            $token = $headers['Authorization'] ?? ($headers['authorization'] ?? null);
+            $token = isset($headers['authorization']) ? $headers['authorization'] : null;
 
             if (!$token) 
                 return Response::json(['error' => 'Unauthorized'], 401);

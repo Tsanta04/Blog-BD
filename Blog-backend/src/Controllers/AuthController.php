@@ -43,8 +43,26 @@
                 return Response::json(['error'=>'Invalid credentials'], 401);
             
             $token = bin2hex(random_bytes(16));
-            $this->redis->setex('session:token:' . $token, intval($_ENV['REDIS_TTL'] ?? 86400), $user->id);
+            $ttl = isset($_ENV['REDIS_TTL']) ? intval($_ENV['REDIS_TTL']) : 86400;
+            $this->redis->setex('session:token:' . $token, $ttl, $user->id);
+
             Response::json(['token' => $token, 'user' => ['id'=>$user->id,'name'=>$user->name,'email'=>$user->email]]);
+        }
+
+        public function logout() {
+            $headers = getallheaders();
+            $token = isset($headers['Authorization']) ? preg_replace('/^Bearer\s+/i','',$headers['Authorization']) : null;
+
+            if (!$token) {
+                return Response::json(['error' => 'Token missing'], 400);
+            }
+
+            if ($this->redis->exists('session:token:' . $token)) {
+                $this->redis->del('session:token:' . $token);
+                return Response::json(['message' => 'Logged out successfully']);
+            } else {
+                return Response::json(['error' => 'Invalid or expired token'], 401);
+            }
         }
     }
 

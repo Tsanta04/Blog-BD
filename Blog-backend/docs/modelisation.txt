@@ -1,0 +1,46 @@
+1- User: POSTGRES (RedBean)
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT now()
+);
+
+2- Posts: MONGODB
+{
+  "_id": ObjectId,
+  "user_id": ObjectId,
+  "title": "string",
+  "content": "string",
+  "tags": ["tag1", "tag2"],
+  "created_at": ISODate,
+  "updated_at": ISODate
+}
+
+3- Comments: MONGODB
+{
+  "_id": ObjectId,
+  "post_id": ObjectId,
+  "user_id": ObjectId,
+  "content": "string",
+  "created_at": ISODate,
+  "updated_at": ISODate
+}
+
+4- Likes: MONGODB
+{
+  "_id": ObjectId,
+  "post_id": ObjectId,
+  "user_id": ObjectId,
+  "created_at": ISODate
+}
+
+5- Vues par post : REDIS
+clé post:{post_id}:views → incrémentée à chaque consultation.
+
+6- Likes count : REDIS
+clé post:{post_id}:likes → incrémentée/décrémentée à chaque like/unlike.
+
+7- Sessions utilisateur (auth tokens) : REDIS
+clé session:token:{token} → valeur user_id avec TTL.

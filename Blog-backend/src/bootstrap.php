@@ -18,8 +18,8 @@
     // Predis
     $redis = new PredisClient([
         'scheme' => 'tcp',
-        'host' => $_ENV['REDIS_HOST'] ?? '127.0.0.1',
-        'port' => $_ENV['REDIS_PORT'] ?? 6379,
+        'host' => isset($_ENV['REDIS_HOST']) ? $_ENV['REDIS_HOST'] : '127.0.0.1',
+        'port' => isset($_ENV['REDIS_PORT']) ? $_ENV['REDIS_PORT'] : 6379,
     ]);
 
     // Mongo

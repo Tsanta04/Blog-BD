@@ -1,67 +1,171 @@
 <?php
-    namespace App\Controllers;
+namespace App\Controllers;
 
-    use App\Utils\Response;
+use App\Utils\Response;
+use MongoDB\BSON\ObjectId;
+use MongoDB\BSON\UTCDateTime;
 
-    class PostController {
-        private $rb; private $mongo; private $redis;
+class PostController {
+    private $mongo;
+    private $redis;
 
-        public function __construct($rb, $mongo, $redis){ $this->rb=$rb; $this->mongo=$mongo; $this->redis=$redis; }
-
-        private function body(){ 
-            return json_decode(file_get_contents('php://input'), true); 
-        }
-
-        // GET /api/posts
-        public function index(){
-            $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 20;
-            $posts = R::findAll('post', ' ORDER BY created_at DESC LIMIT ? ', [$limit]);
-            $result = [];
-            
-            foreach ($posts as $p){
-                $meta = $this->mongo->selectCollection('post_metadata')->findOne(['post_id' => intval($p->id)]);
-                $views = $this->redis->get('post:'.$p->id.':views') ?? ($meta['views']['today'] ?? 0);
-                $result[] = ['id'=>$p->id,'title'=>$p->title,'excerpt'=>mb_substr($p->content,0,200),'user_id'=>$p->user_id,'created_at'=>$p->created_at,'views'=>intval($views)];
-            }
-
-            Response::json(['data'=>$result]);
-        }
-
-        // POST /api/posts (protected)
-        public function create($userId){
-            $b = $this->body(); 
-
-            if (empty($b['title']) || empty($b['content'])) 
-                return Response::json(['error'=>'Missing fields'],400);
-
-            $post = R::dispense('post'); $post->title = $b['title']; $post->content=$b['content']; $post->user_id=$userId; $post->created_at = date('c');
-            $id = R::store($post);
-
-            // save tags & metadata in mongo
-            $meta = ['post_id'=>intval($id),'tags'=>$b['tags'] ?? [], 'views'=>['today'=>0],'updated_at'=>new \MongoDB\BSON\UTCDateTime((new \DateTime())->getTimestamp()*1000)];
-            $this->mongo->selectCollection('post_metadata')->insertOne($meta);
-
-            Response::json(['message'=>'created','id'=>$id],201);
-        }
-
-
-        // GET /api/posts/{id}
-        public function show($id){
-            $p = R::load('post', $id); if (!$p->id) return Response::json(['error'=>'Not found'],404);
-
-            // increment view counter in Redis
-            $this->redis->incr('post:'.$id.':views');
-            $meta = $this->mongo->selectCollection('post_metadata')->findOne(['post_id'=>intval($id)]);
-
-            // comments
-            $comments = R::find('comment', ' post_id = ? ORDER BY created_at DESC ', [$id]);
-            $cdata = [];
-            foreach ($comments as $c){
-                $cdata[]=['id'=>$c->id,'content'=>$c->content,'user_id'=>$c->user_id,'created_at'=>$c->created_at]; 
-            }
-
-            Response::json(['post'=>['id'=>$p->id,'title'=>$p->title,'content'=>$p->content,'created_at'=>$p->created_at,'user_id'=>$p->user_id,'tags'=>$meta['tags'] ?? [],'views'=>intval($this->redis->get('post:'.$id.':views') ?? 0),'comments'=>$cdata]]);
-        }
+    public function __construct($mongo, $redis){
+        $this->mongo = $mongo;
+        $this->redis = $redis;
     }
 
+    private function body(){ 
+        return json_decode(file_get_contents('php://input'), true); 
+    }
+
+    // GET /api/posts
+    public function index(){
+        $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 20;
+        $postsCursor = $this->mongo->posts->find([], [
+            'sort' => ['created_at' => -1],
+            'limit' => $limit
+        ]);
+
+        $result = [];
+        foreach ($postsCursor as $p){
+            $postId = (string)$p->_id;
+            $views = $this->redis->exists('post:' . $postId . ':views') 
+                        ? intval($this->redis->get('post:' . $postId . ':views')) 
+                        : 0;
+
+            $result[] = [
+                'id' => $postId,
+                'title' => $p->title,
+                'excerpt' => mb_substr($p->content, 0, 200),
+                'user_id' => $p->user_id,
+                'created_at' => $p->created_at->toDateTime()->format('c'),
+                'views' => $views
+            ];
+        }
+
+        Response::json(['data' => $result]);
+    }
+
+    // POST /api/posts (protected)
+    public function create($userId){
+        $b = $this->body(); 
+
+        if (empty($b['title']) || empty($b['content'])) 
+            return Response::json(['error'=>'Missing fields'], 400);
+
+        $postData = [
+            'user_id' => intval($userId),
+            'title' => $b['title'],
+            'content' => $b['content'],
+            'tags' => (isset($b['tags']) && is_array($b['tags'])) ? $b['tags'] : [],
+            'created_at' => new UTCDateTime(),
+            'updated_at' => new UTCDateTime()
+        ];
+
+        $insertResult = $this->mongo->posts->insertOne($postData);
+        $postId = (string)$insertResult->getInsertedId();
+
+        // initialiser compteur de vues dans Redis
+        $this->redis->set('post:' . $postId . ':views', 0);
+
+        Response::json(['message'=>'created', 'id' => $postId], 201);
+    }
+
+    // GET /api/posts/{id}
+    public function show($id){
+        try {
+            $postObjId = new ObjectId($id);
+        } catch (\Exception $e) {
+            return Response::json(['error'=>'Invalid post id'], 400);
+        }
+
+        $p = $this->mongo->posts->findOne(['_id' => $postObjId]);
+        if (!$p) return Response::json(['error'=>'Not found'], 404);
+
+        // increment view counter in Redis
+        $this->redis->incr('post:' . $id . ':views');
+        $views = intval($this->redis->get('post:' . $id . ':views') ? $this->redis->get('post:' . $id . ':views') : 0);
+
+        // comments
+        $commentsCursor = $this->mongo->comments->find(['post_id' => $id]);
+        $cdata = [];
+        foreach ($commentsCursor as $c){
+            $cdata[] = [
+                'id' => (string)$c->_id,
+                'content' => $c->content,
+                'user_id' => $c->user_id,
+                'created_at' => $c->created_at->toDateTime()->format('c')
+            ];
+        }
+
+        Response::json([
+            'post' => [
+                'id' => $id,
+                'title' => $p->title,
+                'content' => $p->content,
+                'created_at' => $p->created_at->toDateTime()->format('c'),
+                'user_id' => $p->user_id,
+                'tags' => isset($p->tags) ? $p->tags : [],
+                'views' => $views,
+                'comments' => $cdata
+            ]
+        ]);
+    }
+
+    // PUT /api/posts/{id} (protected)
+    public function update($userId, $id){
+        try {
+            $postObjId = new ObjectId($id);
+        } catch (\Exception $e) {
+            return Response::json(['error'=>'Invalid post id'], 400);
+        }
+
+        $post = $this->mongo->posts->findOne(['_id' => $postObjId]);
+        if (!$post) return Response::json(['error'=>'Post not found'], 404);
+
+        if ($post->user_id != $userId) return Response::json(['error'=>'Forbidden'], 403);
+
+        $b = $this->body();
+        $updateData = [];
+        if (!empty($b['title'])) $updateData['title'] = $b['title'];
+        if (!empty($b['content'])) $updateData['content'] = $b['content'];
+        if (isset($b['tags']) && is_array($b['tags'])) $updateData['tags'] = $b['tags'];
+        if (!empty($updateData)) $updateData['updated_at'] = new UTCDateTime();
+
+        if (!empty($updateData)) {
+            $this->mongo->posts->updateOne(
+                ['_id' => $postObjId],
+                ['$set' => $updateData]
+            );
+        }
+
+        Response::json(['message'=>'Post updated']);
+    }
+
+    // DELETE /api/posts/{id} (protected)
+    public function delete($userId, $id){
+        try {
+            $postObjId = new ObjectId($id);
+        } catch (\Exception $e) {
+            return Response::json(['error'=>'Invalid post id'], 400);
+        }
+
+        $post = $this->mongo->posts->findOne(['_id' => $postObjId]);
+        if (!$post) return Response::json(['error'=>'Post not found'], 404);
+
+        if ($post->user_id != $userId) return Response::json(['error'=>'Forbidden'], 403);
+
+        // Supprimer tous
+        $this->mongo->posts->deleteOne(['_id' => $postObjId]);
+        $this->mongo->comments->deleteMany(['post_id' => $id]);
+        $this->mongo->likes->deleteMany(['post_id' => $id]);
+
+        // Supprimer les compteurs Redis
+        $this->redis->del('post:' . $id . ':views');
+        $this->redis->del('post:' . $id . ':likes');
+
+        Response::json(['message'=>'Post deleted']);
+    }
+    
+}
 ?>
