@@ -22,7 +22,7 @@ class PostController {
     public function index(){
         $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 20;
         $postsCursor = $this->mongo->posts->find([], [
-            'sort' => ['created_at' => -1],
+            'sort' => ['metadata.created_at' => -1],
             'limit' => $limit
         ]);
 
@@ -31,15 +31,17 @@ class PostController {
             $postId = (string)$p->_id;
             $views = $this->redis->exists('post:' . $postId . ':views') 
                         ? intval($this->redis->get('post:' . $postId . ':views')) 
-                        : 0;
+                        : (isset($p->metadata['views']['today']) ? intval($p->metadata['views']['today']) : 0);
 
             $result[] = [
                 'id' => $postId,
                 'title' => $p->title,
                 'excerpt' => mb_substr($p->content, 0, 200),
                 'user_id' => $p->user_id,
-                'created_at' => $p->created_at->toDateTime()->format('c'),
-                'views' => $views
+                'created_at' => isset($p->metadata['created_at']) ? $p->metadata['created_at']->toDateTime()->format('c') : null,
+                'views' => $views,
+                'tags' => isset($p->metadata['tags']) ? $p->metadata['tags'] : [],
+                'media' => isset($p->media) ? $p->media : []
             ];
         }
 
@@ -54,12 +56,16 @@ class PostController {
             return Response::json(['error'=>'Missing fields'], 400);
 
         $postData = [
-            'user_id' => intval($userId),
+            'user_id' => new ObjectId($userId),
             'title' => $b['title'],
             'content' => $b['content'],
-            'tags' => (isset($b['tags']) && is_array($b['tags'])) ? $b['tags'] : [],
-            'created_at' => new UTCDateTime(),
-            'updated_at' => new UTCDateTime()
+            'metadata' => [
+                'tags' => (isset($b['tags']) && is_array($b['tags'])) ? $b['tags'] : [],
+                'views' => ['today'=>0, 'week'=>0, 'month'=>0, 'total'=>0, 'country'=>[]],
+                'created_at' => new UTCDateTime(),
+                'updated_at' => new UTCDateTime(),
+            ],
+            'media' => (isset($b['media']) && is_array($b['media'])) ? $b['media'] : []
         ];
 
         $insertResult = $this->mongo->posts->insertOne($postData);
@@ -84,16 +90,16 @@ class PostController {
 
         // increment view counter in Redis
         $this->redis->incr('post:' . $id . ':views');
-        $views = intval($this->redis->get('post:' . $id . ':views') ? $this->redis->get('post:' . $id . ':views') : 0);
+        $views = intval($this->redis->get('post:' . $id . ':views') ?: 0);
 
         // comments
-        $commentsCursor = $this->mongo->comments->find(['post_id' => $id]);
+        $commentsCursor = $this->mongo->comments->find(['post_id' => $postObjId]);
         $cdata = [];
         foreach ($commentsCursor as $c){
             $cdata[] = [
                 'id' => (string)$c->_id,
                 'content' => $c->content,
-                'user_id' => $c->user_id,
+                'user_id' => (string)$c->user_id,
                 'created_at' => $c->created_at->toDateTime()->format('c')
             ];
         }
@@ -103,10 +109,12 @@ class PostController {
                 'id' => $id,
                 'title' => $p->title,
                 'content' => $p->content,
-                'created_at' => $p->created_at->toDateTime()->format('c'),
+                'created_at' => isset($p->metadata['created_at']) ? $p->metadata['created_at']->toDateTime()->format('c') : null,
+                'updated_at' => isset($p->metadata['updated_at']) ? $p->metadata['updated_at']->toDateTime()->format('c') : null,
                 'user_id' => $p->user_id,
-                'tags' => isset($p->tags) ? $p->tags : [],
+                'tags' => isset($p->metadata['tags']) ? $p->metadata['tags'] : [],
                 'views' => $views,
+                'media' => isset($p->media) ? $p->media : [],
                 'comments' => $cdata
             ]
         ]);
@@ -122,15 +130,16 @@ class PostController {
 
         $post = $this->mongo->posts->findOne(['_id' => $postObjId]);
         if (!$post) return Response::json(['error'=>'Post not found'], 404);
-
-        if ($post->user_id != $userId) return Response::json(['error'=>'Forbidden'], 403);
+        if ((string)$post->user_id !== (string)$userId) return Response::json(['error'=>'Forbidden'], 403);
 
         $b = $this->body();
         $updateData = [];
+
         if (!empty($b['title'])) $updateData['title'] = $b['title'];
         if (!empty($b['content'])) $updateData['content'] = $b['content'];
-        if (isset($b['tags']) && is_array($b['tags'])) $updateData['tags'] = $b['tags'];
-        if (!empty($updateData)) $updateData['updated_at'] = new UTCDateTime();
+        if (isset($b['tags']) && is_array($b['tags'])) $updateData['metadata.tags'] = $b['tags'];
+        if (isset($b['media']) && is_array($b['media'])) $updateData['media'] = $b['media'];
+        if (!empty($updateData)) $updateData['metadata.updated_at'] = new UTCDateTime();
 
         if (!empty($updateData)) {
             $this->mongo->posts->updateOne(
@@ -141,6 +150,7 @@ class PostController {
 
         Response::json(['message'=>'Post updated']);
     }
+
 
     // DELETE /api/posts/{id} (protected)
     public function delete($userId, $id){

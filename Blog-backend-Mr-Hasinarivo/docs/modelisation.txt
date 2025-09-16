@@ -10,13 +10,35 @@ CREATE TABLE users (
 2- Posts: MONGODB
 {
   "_id": ObjectId,
-  "user_id": ObjectId,
+  "user_id": ObjectId,          // auteur du post
   "title": "string",
   "content": "string",
-  "tags": ["tag1", "tag2"],
-  "created_at": ISODate,
-  "updated_at": ISODate
+  "metadata": {
+    "tags": ["tag1", "tag2"],  // mots-clés pour recherche rapide
+    "views": {
+      "today": 45,
+      "week": 220,
+      "month": 900,
+      "total": 1500,
+      "country": { "FR": 30, "MG": 15 } // stats par pays
+    },
+    "created_at": ISODate,
+    "updated_at": ISODate,
+  },
+  "media": [
+    {
+      "url": "string",           // chemin ou URL complet
+      "type": "image"|"video"|"audio"|"file", // type de média
+      "metadata": {              // optionnel, pour infos additionnelles
+        "size": 102400,          // taille en octets
+        "width": 1024,           // pour images/vidéos
+        "height": 768,
+        "duration": 30           // en secondes pour vidéo/audio
+      }
+    }
+  ],
 }
+
 
 3- Comments: MONGODB
 {
