@@ -13,7 +13,7 @@
         $_ENV['DB_PASS']
     );
     R::ext('xdispense', function($type){ return R::dispense($type); });
-    $rb = R::getRedBean(); // convenience variable for controllers
+    $rb = R::getRedBean(); 
 
     // Predis
     $redis = new PredisClient([

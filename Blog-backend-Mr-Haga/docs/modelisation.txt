@@ -1,0 +1,8 @@
+5- Vues par post : REDIS
+clé post:{post_id}:views → incrémentée à chaque consultation.
+
+6- Likes count : REDIS
+clé post:{post_id}:likes → incrémentée/décrémentée à chaque like/unlike.
+
+7- Sessions utilisateur (auth tokens) : REDIS
+clé session:token:{token} → valeur user_id avec TTL.
