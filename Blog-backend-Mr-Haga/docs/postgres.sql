@@ -33,7 +33,7 @@ CREATE TABLE tags (
 -- ====================
 -- TABLE: Type medias
 -- ====================
-CREATE TABLE tags (
+CREATE TABLE types_medias (
     id SERIAL PRIMARY KEY,
     type_ VARCHAR(200) NOT NULL,
 );
