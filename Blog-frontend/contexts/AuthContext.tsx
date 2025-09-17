@@ -6,10 +6,17 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<{ success: boolean; message: string }>;
+  signup: (data: { name: string; email: string; password: string }) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
+
+type SignupCredentials = {
+  name: string;
+  email: string;
+  password: string;
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -46,7 +53,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const authResponse = await authService.login(credentials);
       setUser(authResponse.user);
       setToken(authResponse.token);
-      await authService.storeAuth(authResponse);
+      const resp = await authService.storeAuth(authResponse);
+      return resp;
+    } catch (error) {
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signup = async (credentials: SignupCredentials) => {
+    try {
+      setLoading(true);
+
+      // 🔹 Appel API inscription
+      const authResponse = await authService.signup(credentials);
+
+      // 🔹 On enregistre l'utilisateur et son token
+      setUser(authResponse.user);
+      setToken(authResponse.token);
+
+      // 🔹 Sauvegarde dans le storage (SecureStore ou AsyncStorage)
+      const resp = await authService.storeAuth(authResponse);
+
+      return resp;
     } catch (error) {
       throw error;
     } finally {
@@ -76,6 +106,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         token,
         loading,
         login,
+        signup,
         logout,
         isAuthenticated,
       }}

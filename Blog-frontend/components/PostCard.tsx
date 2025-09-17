@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Heart, MessageCircle, Eye } from 'lucide-react-native';
 import { Post } from '@/types';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -134,6 +134,18 @@ export function PostCard({ post, onPress, onLike }: PostCardProps) {
 
         <Text style={styles.title}>{post.title}</Text>
         <Text style={styles.excerpt}>{post.excerpt}</Text>
+
+        <Image
+          source={{
+            uri: "https://recoverit.wondershare.com/uploads/best-3d-wallpaper-android-05.jpg",
+          }}
+          style={{
+            width: '100%',
+            marginBottom: 16,
+            height: 200, // fixe une hauteur ou adapte dynamiquement
+          }}
+          resizeMode="cover"
+        />
 
         {post.tags.length > 0 && (
           <View style={styles.tags}>

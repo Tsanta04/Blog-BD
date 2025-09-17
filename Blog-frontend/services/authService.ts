@@ -49,11 +49,19 @@ class AuthService {
     }
   }
 
-  async storeAuth(authData: AuthResponse): Promise<void> {
+  async storeAuth(authData: AuthResponse): Promise<{ success: boolean; message: string }> {
     try {
       await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
+      return {
+        success: true,
+        message: 'Authentication data stored successfully',
+      };
     } catch (error) {
       console.error('Error storing auth data:', error);
+      return {
+        success: false,
+        message: 'Failed to store authentication data',
+      };
     }
   }
 

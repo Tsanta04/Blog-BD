@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Heart, MessageCircle, Eye } from 'lucide-react-native';
@@ -330,7 +331,17 @@ export default function PostDetailScreen() {
 
             <Text style={styles.title}>{post.title}</Text>
             <Text style={styles.postText}>{post.content}</Text>
-
+              <Image
+                    source={{
+                      uri: "https://recoverit.wondershare.com/uploads/best-3d-wallpaper-android-05.jpg",
+                    }}
+                    style={{
+                      width: '100%',
+                      marginBottom: 16,
+                      height: 200, // fixe une hauteur ou adapte dynamiquement
+                    }}
+                    resizeMode="cover"
+                  />
             {post.tags.length > 0 && (
               <View style={styles.tags}>
                 {post.tags.map((tag, index) => (

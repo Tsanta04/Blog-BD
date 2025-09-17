@@ -8,7 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { LogOut, Settings, User as UserIcon } from 'lucide-react-native';
+import { LogOut, Settings, User as UserIcon, Plus } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/Button';
@@ -51,18 +51,23 @@ export default function ProfileScreen() {
       marginBottom: 24,
     },
     avatar: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
+      width: 100,
+      height: 100,
+      borderRadius: 50,
       backgroundColor: colors.primary,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 5,
     },
     avatarText: {
       color: '#FFFFFF',
       fontWeight: '700',
-      fontSize: 32,
+      fontSize: 36,
     },
     username: {
       fontSize: 24,
@@ -73,6 +78,7 @@ export default function ProfileScreen() {
     email: {
       fontSize: 16,
       color: colors.subtext,
+      marginBottom: 16,
     },
     menuItem: {
       flexDirection: 'row',
@@ -92,6 +98,22 @@ export default function ProfileScreen() {
     logoutButton: {
       marginTop: 32,
     },
+    addButton: {
+      position: 'absolute',
+      bottom: 24,
+      right: 24,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 5,
+    },
   });
 
   const getInitials = (username: string) => {
@@ -108,10 +130,7 @@ export default function ProfileScreen() {
       'Déconnexion',
       'Êtes-vous sûr de vouloir vous déconnecter ?',
       [
-        {
-          text: 'Annuler',
-          style: 'cancel',
-        },
+        { text: 'Annuler', style: 'cancel' },
         {
           text: 'Déconnecter',
           style: 'destructive',
@@ -148,6 +167,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
+        {/* Header profil */}
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
@@ -158,34 +178,57 @@ export default function ProfileScreen() {
           <Text style={styles.email}>{user?.email}</Text>
         </View>
 
+        {/* Menu options */}
         <Card>
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            // onPress={() => router.push('/profile/edit')}
+          >
             <UserIcon size={24} color={colors.primary} style={styles.menuIcon} />
             <Text style={styles.menuText}>Modifier le profil</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            // onPress={() => router.push('/settings')}
+          >
             <Settings size={24} color={colors.primary} style={styles.menuIcon} />
             <Text style={styles.menuText}>Paramètres</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            // onPress={() => router.push('/my-posts')}
+          >
+            <UserIcon size={24} color={colors.primary} style={styles.menuIcon} />
+            <Text style={styles.menuText}>Mes articles</Text>
+          </TouchableOpacity>
         </Card>
 
+        {/* Bouton logout */}
         <View style={styles.logoutButton}>
           <Button
             title="Se déconnecter"
             onPress={handleLogout}
             variant="outline"
             loading={loading}
-            style={{
-              backgroundColor: 'transparent',
-              borderColor: colors.error,
-            }}
-            textStyle={{
-              color: colors.error,
-            }}
+            style={{ backgroundColor: 'transparent', borderColor: colors.error }}
+            textStyle={{ color: colors.error }}
           />
         </View>
       </View>
+
+      {/* Bouton ajouter un nouvel article */}
+      <TouchableOpacity
+        style={styles.addButton}
+        activeOpacity={0.7}
+        onPress={() => router.push('/create')}
+      >
+        <Plus size={28} color="#fff" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
