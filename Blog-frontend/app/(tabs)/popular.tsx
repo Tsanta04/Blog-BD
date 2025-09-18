@@ -6,8 +6,10 @@ import {
   FlatList,
   RefreshControl,
   SafeAreaView,
+  ImageBackground,
+  TextInput,
 } from 'react-native';
-import { router } from 'expo-router';
+import { Href, router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { PostCard } from '@/components/PostCard';
@@ -15,13 +17,15 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/Button';
 import { Post } from '@/types';
 import { apiService } from '@/services/apiService';
+import { backgorund } from '@/data/background';
 
-export default function PopularScreen() {
+export default function SearchScreen() {
   const { colors } = useTheme();
   const { isAuthenticated, token } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   const styles = StyleSheet.create({
     container: {
@@ -39,30 +43,20 @@ export default function PopularScreen() {
       fontSize: 28,
       fontWeight: '700',
       color: colors.text,
-      marginBottom: 8,
+      marginBottom: 12,
+    },
+    searchInput: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: colors.text,
+      marginBottom: 16,
     },
     subtitle: {
       fontSize: 16,
       color: colors.subtext,
-    },
-    authPrompt: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 20,
-    },
-    authTitle: {
-      fontSize: 24,
-      fontWeight: '600',
-      color: colors.text,
-      marginBottom: 12,
-    },
-    authSubtitle: {
-      fontSize: 16,
-      color: colors.subtext,
-      textAlign: 'center',
-      marginBottom: 24,
-      lineHeight: 22,
     },
     errorContainer: {
       flex: 1,
@@ -76,16 +70,25 @@ export default function PopularScreen() {
       textAlign: 'center',
       marginBottom: 16,
     },
+    background: {
+      flex: 1,
+      resizeMode: 'cover',
+    },
   });
 
-  const fetchPopularPosts = async () => {
+  const searchPosts = async () => {
+    if (!query.trim()) {
+      setPosts([]);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-      const fetchedPosts = await apiService.getPopularPosts(token || undefined);
-      setPosts(fetchedPosts);
+      // const results = await apiService.searchPosts(query, token || undefined);
+      // setPosts(results);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch popular posts');
+      setError(err instanceof Error ? err.message : 'Erreur lors de la recherche');
     } finally {
       setLoading(false);
     }
@@ -98,7 +101,6 @@ export default function PopularScreen() {
     if (!post) return;
 
     try {
-      // Optimistically update UI
       setPosts(prevPosts =>
         prevPosts.map(p =>
           p.id === postId
@@ -111,49 +113,39 @@ export default function PopularScreen() {
         )
       );
 
-      // Make API call
       if (post.isLiked) {
         await apiService.unlikePost(postId, token);
       } else {
         await apiService.likePost(postId, token);
       }
     } catch (error) {
-      // Revert optimistic update on error
       setPosts(prevPosts =>
         prevPosts.map(p =>
           p.id === postId
-            ? {
-                ...p,
-                isLiked: post.isLiked,
-                likesCount: post.likesCount,
-              }
+            ? { ...p, isLiked: post.isLiked, likesCount: post.likesCount }
             : p
         )
       );
-      console.error('Error toggling like:', error);
     }
   };
 
-  const handlePostPress = (post: Post) => {
-    router.push({
-      pathname: '/post/[id]',
-      params: { id: post.id },
-    });
+  const handlePostPress = (post: Post, path: Href) => {
+    if (typeof path === "string") {
+      router.push(`${path}?id=${post.id}` as Href);
+    } else {
+      router.push({
+        ...path,
+        params: { id: post.id },
+      });
+    }
   };
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchPopularPosts();
-    }
-  }, [isAuthenticated, token]);
 
   if (!isAuthenticated) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.authPrompt}>
-          <Text style={styles.authTitle}>Articles Populaires</Text>
-          <Text style={styles.authSubtitle}>
-            Connectez-vous pour découvrir les articles les plus populaires
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>
+            Connectez-vous pour rechercher des articles
           </Text>
           <Button
             title="Se connecter"
@@ -161,60 +153,56 @@ export default function PopularScreen() {
             size="large"
           />
         </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (loading && posts.length === 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <LoadingSpinner />
-      </SafeAreaView>
-    );
-  }
-
-  if (error) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Button title="Réessayer" onPress={fetchPopularPosts} />
-        </View>
-      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <ImageBackground
+      source={{ uri: backgorund }}
+      style={[styles.background, styles.container]}
+    >
       <FlatList
         data={posts}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.content}
         ListHeaderComponent={() => (
           <View style={styles.header}>
-            <Text style={styles.title}>Articles Populaires 🔥</Text>
-            <Text style={styles.subtitle}>
-              Les articles les plus likés et commentés
-            </Text>
+            <Text style={styles.title}>Recherche 🔎</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Rechercher un article..."
+              placeholderTextColor={colors.subtext}
+              value={query}
+              onChangeText={setQuery}
+              onSubmitEditing={searchPosts}
+              returnKeyType="search"
+            />
+            {error && <Text style={styles.errorText}>{error}</Text>}
           </View>
         )}
         renderItem={({ item }) => (
           <PostCard
             post={item}
-            onPress={() => handlePostPress(item)}
+            onPress2={() => handlePostPress(item,'/post/[id]')}
+            onPress1={() => handlePostPress(item,'/profile/[id]')}
             onLike={toggleLike}
           />
         )}
+        ListEmptyComponent={
+          !loading && query.trim() ? (
+            <Text style={styles.subtitle}>Aucun résultat trouvé</Text>
+          ) : null
+        }
         refreshControl={
           <RefreshControl
             refreshing={loading}
-            onRefresh={fetchPopularPosts}
+            onRefresh={searchPosts}
             colors={[colors.primary]}
             tintColor={colors.primary}
           />
         }
         showsVerticalScrollIndicator={false}
       />
-    </SafeAreaView>
+    </ImageBackground>
   );
 }

@@ -9,7 +9,7 @@ import {
   ImageBackground,
   TouchableOpacity,
 } from 'react-native';
-import { router } from 'expo-router';
+import { Href, router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { usePosts } from '@/hooks/usePosts';
@@ -18,6 +18,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/Button';
 import { Post } from '@/types';
 import { Plus } from 'lucide-react-native';
+import { backgorund } from '@/data/background';
 
 export default function HomeScreen() {
   const { colors } = useTheme();
@@ -92,10 +93,11 @@ export default function HomeScreen() {
     },
     fab: {
       position: 'absolute',
-      bottom: 24,
+      bottom: 85,
       right: 24,
       width: 60,
       height: 60,
+      zIndex:200,
       borderRadius: 30,
       backgroundColor: '#4CAF50', // couleur verte par exemple
       justifyContent: 'center',
@@ -108,22 +110,20 @@ export default function HomeScreen() {
     },    
   });
 
-  const handlePostPress = (post: Post) => {
-    router.push({
-      pathname: '/post/[id]',
-      params: { id: post.id },
-    });
+  const handlePostPress = (post: Post, path: Href) => {
+    if (typeof path === "string") {
+      router.push(`${path}?id=${post.id}` as Href);
+    } else {
+      router.push({
+        ...path,
+        params: { id: post.id },
+      });
+    }
   };
 
   if (!isAuthenticated) {
     return (
       <SafeAreaView style={styles.container}>
-        <ImageBackground
-          source={{
-            uri: 'https://img.freepik.com/photos-gratuite/illustration-rendu-3d-boules-vertes_181624-58606.jpg?semt=ais_incoming&w=740&q=80',
-          }}
-          style={styles.background}
-        >
           <View style={styles.overlay}>
             <View style={styles.authPrompt}>
               <Text style={styles.authTitle}>Bienvenue sur Mini Blog</Text>
@@ -137,7 +137,6 @@ export default function HomeScreen() {
               />
             </View>
           </View>
-        </ImageBackground>
       </SafeAreaView>
     );
   }
@@ -145,16 +144,9 @@ export default function HomeScreen() {
   if (loading && posts.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
-        <ImageBackground
-          source={{
-            uri: 'https://img.freepik.com/photos-gratuite/illustration-rendu-3d-boules-vertes_181624-58606.jpg?semt=ais_incoming&w=740&q=80',
-          }}
-          style={styles.background}
-        >
           <View style={styles.overlay}>
             <LoadingSpinner />
           </View>
-        </ImageBackground>
       </SafeAreaView>
     );
   }
@@ -162,25 +154,22 @@ export default function HomeScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
-        <ImageBackground
-          source={{
-            uri: 'https://img.freepik.com/photos-gratuite/illustration-rendu-3d-boules-vertes_181624-58606.jpg?semt=ais_incoming&w=740&q=80',
-          }}
-          style={styles.background}
-        >
           <View style={styles.overlay}>
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
               <Button title="Réessayer" onPress={refetch} />
             </View>
           </View>
-        </ImageBackground>
       </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.overlay}>
+  <ImageBackground
+    source={{ uri: backgorund }}
+    style={[styles.background, styles.overlay]}
+  >    
+    {/* <View style={styles.overlay}> */}
         <TouchableOpacity
           style={styles.fab}
           onPress={() => router.push('/create')}
@@ -203,7 +192,8 @@ export default function HomeScreen() {
         renderItem={({ item }) => (
           <PostCard
             post={item}
-            onPress={() => handlePostPress(item)}
+            onPress2={() => handlePostPress(item,'/post/[id]')}
+            onPress1={() => handlePostPress(item,'/profile/[id]')}
             onLike={toggleLike}
           />
         )}
@@ -217,6 +207,7 @@ export default function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    {/* </View> */}
+  </ImageBackground>    
   );
 }

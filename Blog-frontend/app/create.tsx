@@ -4,17 +4,18 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ImageBackground,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { apiService } from '@/services/apiService';
+import { FloatingInput } from '@/components/atoms/FloatingInput';
+import { backgorund } from '@/data/background';
+// import { apiService } from '@/services/apiService';
 
 export default function CreatePostScreen() {
   const { colors } = useTheme();
@@ -26,41 +27,50 @@ export default function CreatePostScreen() {
   const [imageUrl, setImageUrl] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
   const styles = StyleSheet.create({
-    container: {
+    container: { flex: 1 },
+    background: { flex: 1, resizeMode: 'cover' },
+    overlay: {
       flex: 1,
-      backgroundColor: colors.background,
+      padding: 20,
     },
-    header: {
-      padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+    content: { flexGrow: 1, justifyContent: 'center', paddingBottom: 40 },
+    header: { alignItems: 'center', marginBottom: 32 },
+    title: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: '#fff',
+      marginBottom: 8,
+      textShadowColor: 'rgba(0,0,0,0.7)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 6,
     },
-    headerTitle: {
-      fontSize: 24,
-      fontWeight: '700',
-      color: colors.text,
-    },
+    subtitle: { fontSize: 16, color: '#f0f0f0', textAlign: 'center' },
     form: {
-      flex: 1,
+      backgroundColor:colors.card,      
+      borderRadius: 16,
       padding: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 6,
+      elevation: 4,
     },
-    label: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text,
-      marginBottom: 4,
-    },
-    input: {
-      marginBottom: 16,
-    },
+    publishButton: { marginTop: 16 },
   });
 
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+    if (!title.trim()) newErrors.title = 'Le titre est requis';
+    if (!content.trim()) newErrors.content = 'Le contenu est requis';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handlePublish = async () => {
-    if (!title.trim() || !content.trim()) {
-      Alert.alert('Erreur', 'Le titre et le contenu sont obligatoires.');
-      return;
-    }
+    if (!validateForm()) return;
 
     if (!token) {
       Alert.alert('Erreur', 'Vous devez être connecté pour publier.');
@@ -69,14 +79,15 @@ export default function CreatePostScreen() {
 
     try {
       setLoading(true);
-    //   await apiService.createPost({
-    //     title,
-    //     content,
-    //     tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
-    //     imageUrl: imageUrl.trim() || undefined,
-    //   }, token);
+      // await apiService.createPost({
+      //   title,
+      //   content,
+      //   tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
+      //   imageUrl: imageUrl.trim() || undefined,
+      // }, token);
+
       Alert.alert('Succès', 'Article publié avec succès !');
-      router.back(); // revenir à la liste
+      router.back();
     } catch (err) {
       Alert.alert('Erreur', err instanceof Error ? err.message : 'Impossible de publier l’article.');
     } finally {
@@ -85,58 +96,66 @@ export default function CreatePostScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Créer un nouvel article</Text>
-      </View>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
+      <ImageBackground
+        source={{ uri: 'https://i.pinimg.com/originals/aa/ae/e0/aaaee0993b2e9764221e19d7f1e9131f.jpg' }}
+        style={styles.background}
       >
-        <ScrollView contentContainerStyle={styles.form}>
-          <Text style={styles.label}>Titre</Text>
-          <Input
-            placeholder="Titre de l'article"
-            value={title}
-            onChangeText={setTitle}
-            style={styles.input}
-          />
+        <View style={styles.overlay}>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.header}>
+              <Text style={styles.title}>Créer un nouvel article</Text>
+              <Text style={styles.subtitle}>
+                Partagez vos idées avec la communauté ✍️
+              </Text>
+            </View>
 
-          <Text style={styles.label}>Contenu</Text>
-          <Input
-            placeholder="Contenu de l'article"
-            value={content}
-            onChangeText={setContent}
-            multiline
-            numberOfLines={6}
-            style={styles.input}
-          />
+            <View style={styles.form}>
+              <FloatingInput
+                label="Titre"
+                value={title}
+                onChangeText={setTitle}
+                error={errors.title}
+              />
 
-          <Text style={styles.label}>Tags (séparés par des virgules)</Text>
-          <Input
-            placeholder="ex: React, JavaScript, Mobile"
-            value={tags}
-            onChangeText={setTags}
-            style={styles.input}
-          />
+              <FloatingInput
+                label="Contenu"
+                value={content}
+                onChangeText={setContent}
+                // multiline
+                error={errors.content}
+              />
 
-          <Text style={styles.label}>URL de l'image</Text>
-          <Input
-            placeholder="https://exemple.com/image.jpg"
-            value={imageUrl}
-            onChangeText={setImageUrl}
-            style={styles.input}
-          />
+              <FloatingInput
+                label="Tags (séparés par des virgules)"
+                value={tags}
+                onChangeText={setTags}
+              />
 
-          <Button
-            title="Publier"
-            onPress={handlePublish}
-            loading={loading}
-            disabled={loading}
-          />
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+              <FloatingInput
+                label="URL de l'image"
+                value={imageUrl}
+                onChangeText={setImageUrl}
+              />
+
+              <Button
+                title="Publier"
+                onPress={handlePublish}
+                loading={loading}
+                disabled={loading}
+                style={styles.publishButton}
+                size="large"
+              />
+            </View>
+          </ScrollView>
+        </View>
+      </ImageBackground>
+    </KeyboardAvoidingView>
   );
 }

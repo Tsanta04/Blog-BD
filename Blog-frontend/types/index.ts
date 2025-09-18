@@ -4,6 +4,9 @@ export interface User {
   username: string;
   avatar?: string;
   createdAt: string;
+  likesCount:number;
+  postsCount:number;
+  commentsCount:number;
 }
 
 export interface Post {

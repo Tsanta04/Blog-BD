@@ -7,11 +7,12 @@ import { Card } from './ui/Card';
 
 interface PostCardProps {
   post: Post;
-  onPress: () => void;
+  onPress1: () => void;
+  onPress2: () => void;  
   onLike: (postId: string) => void;
 }
 
-export function PostCard({ post, onPress, onLike }: PostCardProps) {
+export function PostCard({ post, onPress1, onPress2, onLike }: PostCardProps) {
   const { colors } = useTheme();
 
   const styles = StyleSheet.create({
@@ -119,7 +120,7 @@ export function PostCard({ post, onPress, onLike }: PostCardProps) {
 
   return (
     <Card>
-      <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+      <TouchableOpacity onPress={onPress1} activeOpacity={0.8}>
         <View style={styles.header}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
@@ -131,7 +132,8 @@ export function PostCard({ post, onPress, onLike }: PostCardProps) {
             <Text style={styles.date}>{formatDate(post.createdAt)}</Text>
           </View>
         </View>
-
+      </TouchableOpacity>      
+      <TouchableOpacity onPress={onPress2} activeOpacity={0.8}>
         <Text style={styles.title}>{post.title}</Text>
         <Text style={styles.excerpt}>{post.excerpt}</Text>
 
@@ -179,7 +181,7 @@ export function PostCard({ post, onPress, onLike }: PostCardProps) {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton} onPress={onPress} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.actionButton} onPress={onPress2} activeOpacity={0.7}>
           <MessageCircle size={18} color={colors.subtext} />
           <Text style={styles.actionText}>{post.commentsCount}</Text>
         </TouchableOpacity>

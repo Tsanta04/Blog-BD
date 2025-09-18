@@ -4,29 +4,24 @@ import {
   Text,
   StyleSheet,
   SafeAreaView,
-  TouchableOpacity,
   Alert,
   ImageBackground,
+  RefreshControl,
+  FlatList,
 } from 'react-native';
-import { router } from 'expo-router';
-import {
-  LogOut,
-  Settings,
-  User as UserIcon,
-  Plus,
-  BookOpen,
-  Heart,
-  MessageCircle,
-} from 'lucide-react-native';
+import { Href, router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { backgorund } from '@/data/background';
+import { PostCard } from '@/components/PostCard';
+import { usePosts } from '@/hooks/usePosts';
+import { Post } from '@/types';
 
 export default function ProfileScreen() {
   const { colors } = useTheme();
-  const { isAuthenticated, user, logout, loading } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
+  const { posts, loading, error, refetch, toggleLike } = usePosts();
 
   const styles = StyleSheet.create({
     container: {
@@ -152,26 +147,16 @@ export default function ProfileScreen() {
       .slice(0, 2);
   };
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Déconnexion',
-      'Êtes-vous sûr de vouloir vous déconnecter ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Déconnecter',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-            } catch (error) {
-              Alert.alert('Erreur', 'Une erreur est survenue lors de la déconnexion');
-            }
-          },
-        },
-      ]
-    );
-  };
+    const handlePostPress = (post: Post, path: Href) => {
+    if (typeof path === "string") {
+        router.push(`${path}?id=${post.id}` as Href);
+    } else {
+        router.push({
+        ...path,
+        params: { id: post.id },
+        });
+    }
+    };
 
   if (!isAuthenticated) {
     return (
@@ -222,46 +207,28 @@ export default function ProfileScreen() {
             <Text style={styles.statLabel}>Commentaires</Text>
           </View>
         </View>
-
-        {/* Menu options */}
-        <Card>
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-            <UserIcon size={24} color={colors.primary} style={styles.menuIcon} />
-            <Text style={styles.menuText}>Modifier le profil</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-            <BookOpen size={24} color={colors.primary} style={styles.menuIcon} />
-            <Text style={styles.menuText}>Mes articles</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-            <Heart size={24} color={colors.primary} style={styles.menuIcon} />
-            <Text style={styles.menuText}>Articles aimés</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-            <MessageCircle size={24} color={colors.primary} style={styles.menuIcon} />
-            <Text style={styles.menuText}>Mes commentaires</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-            <Settings size={24} color={colors.primary} style={styles.menuIcon} />
-            <Text style={styles.menuText}>Paramètres</Text>
-          </TouchableOpacity>
-        </Card>
-
-        {/* Bouton logout */}
-        <View style={styles.logoutButton}>
-          <Button
-            title="Se déconnecter"
-            onPress={handleLogout}
-            variant="outline"
-            loading={loading}
-            style={{ backgroundColor: 'transparent', borderColor: colors.error }}
-            textStyle={{ color: colors.error }}
+      <FlatList
+        data={posts}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.content}
+        renderItem={({ item }) => (
+          <PostCard
+            post={item}
+            onPress2={() => handlePostPress(item,'/post/[id]')}
+            onPress1={() => handlePostPress(item,'/profile/[id]')}
+            onLike={toggleLike}
           />
-        </View>
+        )}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={refetch}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      />
       </ImageBackground>
   );
 }
