@@ -1,102 +1,117 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, LoginCredentials, AuthResponse } from '@/types';
-import { authService } from '@/services/authService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthToken, User } from '../utils/types';
+import { logIn, logOut, me, register, update } from '../services/api/auth.api';
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
-  loading: boolean;
-  login: (credentials: LoginCredentials) => Promise<{ success: boolean; message: string }>;
-  signup: (data: { name: string; email: string; password: string }) => Promise<{ success: boolean; message: string }>;
-  logout: () => Promise<void>;
+  token: AuthToken | null;
+  isLoading: boolean;
+  setUser: (user: User) => void;  
+  updateUser: (username: string, email: string) => void;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
-type SignupCredentials = {
-  name: string;
-  email: string;
-  password: string;
-};
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<AuthToken | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadStoredAuth();
   }, []);
 
-  const loadStoredAuth = async () => {
+  const loadStoredAuth = async () => {    
     try {
-      const storedAuth = await authService.getStoredAuth();
-      if (storedAuth) {
-        setUser(storedAuth.user);
-        setToken(storedAuth.token);
+      const data:User = await me();
+      if(!data){
+        setUser(null);
+        await AsyncStorage.removeItem("user");
       }
+      setUser(data);        
     } catch (error) {
-      console.error('Error loading stored auth:', error);
+      console.error("Error loading stored auth:", error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const login = async (credentials: LoginCredentials) => {
+  const signIn = async (email: string, password: string): Promise<void> => {
     try {
-      setLoading(true);
-      const authResponse = await authService.login(credentials);
-      setUser(authResponse.user);
-      setToken(authResponse.token);
-      const resp = await authService.storeAuth(authResponse);
-      return resp;
-    } catch (error) {
+      const user: User = await logIn(email,password);
+
+      setUser(user ?? { email });
+      await AsyncStorage.setItem("user", JSON.stringify(user ?? { email }));
+
+    } catch (error: any) {
+      console.error("Sign in failed:", error);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
-  const signup = async (credentials: SignupCredentials) => {
+  const signUp = async (
+    username: string,
+    email: string,
+    password: string
+  ): Promise<void> => {
     try {
-      setLoading(true);
+      const user: User = await register(username, email, password);
 
-      // 🔹 Appel API inscription
-      const authResponse = await authService.signup(credentials);
+      setUser(user ?? { email });
+      await AsyncStorage.setItem("user", JSON.stringify(user ?? { email }));
 
-      // 🔹 On enregistre l'utilisateur et son token
-      setUser(authResponse.user);
-      setToken(authResponse.token);
-
-      // 🔹 Sauvegarde dans le storage (SecureStore ou AsyncStorage)
-      const resp = await authService.storeAuth(authResponse);
-
-      return resp;
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Sign up failed:", error);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
-  const logout = async () => {
+  const signOut = async (): Promise<void> => {
     try {
-      setLoading(true);
-      await authService.logout();
       setUser(null);
-      setToken(null);
+      await AsyncStorage.removeItem('user');
+      await logOut();
     } catch (error) {
-      console.error('Error during logout:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error signing out:', error);
     }
   };
 
+  
+  const updateUser = async (
+    username: string,
+    email: string,
+  ): Promise<void> => {
+    if(!user)return
+    try {
+      setIsLoading(true);
+      const user_ = await update(user.user_id , username , email)
+      setUser(user_ ?? { email });
+      await AsyncStorage.setItem("user", JSON.stringify(user_ ?? { email }));
+
+    } catch (error: any) {
+      console.error("Sign up failed:", error);
+      throw error;
+    } finally {
+      setIsLoading(false)
+    }
+  };
   const isAuthenticated = !!user && !!token;
 
   return (
@@ -104,22 +119,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       value={{
         user,
         token,
-        loading,
-        login,
-        signup,
-        logout,
+        isLoading,
+        setUser,
+        updateUser,
+        signIn,
+        signUp,
+        signOut,
         isAuthenticated,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
-}
+};

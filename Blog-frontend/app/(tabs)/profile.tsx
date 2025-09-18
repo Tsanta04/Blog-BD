@@ -26,7 +26,7 @@ import { backgorund } from '@/data/background';
 
 export default function ProfileScreen() {
   const { colors } = useTheme();
-  const { isAuthenticated, user, logout, loading } = useAuth();
+  const { isAuthenticated, user, signOut, isLoading } = useAuth();
 
   const styles = StyleSheet.create({
     container: {
@@ -163,7 +163,7 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await logout();
+              await signOut();
             } catch (error) {
               Alert.alert('Erreur', 'Une erreur est survenue lors de la déconnexion');
             }
@@ -257,7 +257,7 @@ export default function ProfileScreen() {
             title="Se déconnecter"
             onPress={handleLogout}
             variant="outline"
-            loading={loading}
+            loading={isLoading}
             style={{ backgroundColor: 'transparent', borderColor: colors.error }}
             textStyle={{ color: colors.error }}
           />

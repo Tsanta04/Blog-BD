@@ -16,7 +16,7 @@ import { PostCard } from '@/components/PostCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/Button';
 import { Post } from '@/types';
-import { apiService } from '@/services/apiService';
+import { apiService } from '@/services__/apiService';
 import { backgorund } from '@/data/background';
 
 export default function SearchScreen() {

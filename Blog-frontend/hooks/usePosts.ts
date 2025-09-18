@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Post } from '@/types';
-import { apiService } from '@/services/apiService';
+import { apiService } from '@/services__/apiService';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function usePosts() {

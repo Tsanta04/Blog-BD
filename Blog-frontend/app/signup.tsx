@@ -19,7 +19,7 @@ import { FloatingInput } from '@/components/atoms/FloatingInput';
 
 export default function SignupScreen() {
   const { colors } = useTheme();
-  const { signup, loading } = useAuth(); // ⚠️ Assure-toi d’avoir `signup` dans ton AuthContext
+  const { signUp, isLoading } = useAuth(); // ⚠️ Assure-toi d’avoir `signup` dans ton AuthContext
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -88,11 +88,11 @@ export default function SignupScreen() {
   const handleSignup = async () => {
     if (!validateForm()) return;
     try {
-      const result = await signup({ name: name.trim(), email: email.trim(), password });
-      if (!result.success) {
-        Alert.alert('Erreur d’inscription', result.message || 'Une erreur est survenue');
-        return;
-      }
+      const result = await signUp( name.trim(), email.trim(), password );
+      // if (!result.success) {
+      //   Alert.alert('Erreur d’inscription', result.message || 'Une erreur est survenue');
+      //   return;
+      // }
       router.replace('/(tabs)');
     } catch (error) {
       Alert.alert(
@@ -156,7 +156,7 @@ export default function SignupScreen() {
             <Button
               title="S’inscrire"
               onPress={handleSignup}
-              loading={loading}
+              loading={isLoading}
               style={styles.signupButton}
               size="large"
             />

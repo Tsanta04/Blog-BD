@@ -17,12 +17,12 @@ import { PostCard } from '@/components/PostCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/Button';
 import { Post } from '@/types';
-import { Plus } from 'lucide-react-native';
+import { Moon, Plus, Sun } from 'lucide-react-native';
 import { backgorund } from '@/data/background';
 
 export default function HomeScreen() {
-  const { colors } = useTheme();
   const { isAuthenticated, user } = useAuth();
+  const { colors, isDark, toggleTheme } = useTheme();
   const { posts, loading, error, refetch, toggleLike } = usePosts();
 
   const styles = StyleSheet.create({
@@ -176,15 +176,28 @@ export default function HomeScreen() {
           activeOpacity={0.8}
         >
           <Plus size={28} color={colors.background} />
+        </TouchableOpacity>    
+      <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}>
+        <View style={styles.header}>
+          <Text style={styles.title}>
+            Bonjour {user?.username} 👋
+          </Text>
+          <Text style={styles.subtitle}>
+            Découvrez les derniers articles
+          </Text>
+        </View>        
+        <TouchableOpacity
+          onPress={toggleTheme}
+          style={{ marginRight: 16 }}
+          activeOpacity={0.7}
+        >
+          {isDark ? (
+            <Sun size={24} color={colors.text} />
+          ) : (
+            <Moon size={24} color={colors.text} />
+          )}
         </TouchableOpacity>      
-      <View style={styles.header}>
-        <Text style={styles.title}>
-          Bonjour {user?.username} 👋
-        </Text>
-        <Text style={styles.subtitle}>
-          Découvrez les derniers articles
-        </Text>
-      </View>
+      </View>  
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}

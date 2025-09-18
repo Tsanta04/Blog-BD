@@ -19,7 +19,7 @@ import { FloatingInput } from '@/components/atoms/FloatingInput';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
-  const { login, loading } = useAuth();
+  const { signIn, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -80,11 +80,11 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (!validateForm()) return;
     try {
-      const result = await login({ email: email.trim(), password });
-      if (!result.success) {
-        Alert.alert('Erreur de connexion', result.message || 'Une erreur est survenue');
-        return;
-      }
+      const result = await signIn( email.trim(), password );
+      // if (!result.success) {
+      //   Alert.alert('Erreur de connexion', result.message || 'Une erreur est survenue');
+      //   return;
+      // }
       router.replace('/(tabs)');
     } catch (error) {
       Alert.alert(
@@ -134,7 +134,7 @@ export default function LoginScreen() {
               <Button
                 title="Se connecter"
                 onPress={handleLogin}
-                loading={loading}
+                loading={isLoading}
                 style={styles.loginButton}
                 size="large"
               />

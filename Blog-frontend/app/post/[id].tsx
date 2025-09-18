@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useComments } from '@/hooks/useComments';
 import { Post } from '@/types';
-import { apiService } from '@/services/apiService';
+import { apiService } from '@/services__/apiService';
 import { CommentCard } from '@/components/CommentCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Input } from '@/components/ui/Input';
@@ -181,7 +181,7 @@ export default function PostDetailScreen() {
     try {
       setLoading(true);
       setError(null);
-      const fetchedPost = await apiService.getPost(id, token || undefined);
+      const fetchedPost = await apiService.getPost(id, token?.accessToken || undefined);
       setPost(fetchedPost);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch post');
@@ -206,9 +206,9 @@ export default function PostDetailScreen() {
 
       // Make API call
       if (post.isLiked) {
-        await apiService.unlikePost(post.id, token);
+        await apiService.unlikePost(post.id, token.accessToken);
       } else {
-        await apiService.likePost(post.id, token);
+        await apiService.likePost(post.id, token.accessToken);
       }
     } catch (error) {
       // Revert optimistic update on error
