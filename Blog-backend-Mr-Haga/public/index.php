@@ -8,18 +8,50 @@
     use App\Controllers\LikeController;
     use App\Middleware\AuthMiddleware;
 
+    header("Access-Control-Allow-Origin: *");
+    header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization");
+
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        http_response_code(200);
+        exit();
+    }
+
     $method = $_SERVER['REQUEST_METHOD'];
     $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     $uri = rtrim($uri, '/');
 
     // simple routing (for demo purposes)
+    if ($uri === '/api/me' && $method === 'POST') {
+        AuthMiddleware::guard($redis, function($userId) use($mongo,$redis){ 
+            (new AuthController($rb, $redis))->me();
+        });
+        exit;
+    }
+
+    if ($uri === '/api/login' && $method === 'POST') {
+        (new AuthController($rb, $redis))->login();
+        exit;
+    }
+
     if ($uri === '/api/register' && $method === 'POST') {
         (new AuthController($rb, $redis))->register();
         exit;
     }
 
     if ($uri === '/api/logout' && $method === 'POST') {
-        (new AuthController($rb, $redis))->logout();
+        AuthMiddleware::guard($redis, function($userId) use($mongo,$redis){ 
+            (new AuthController($rb, $redis))->logout();
+        });
+        exit;
+    }
+
+    // PUT /api/update_user/{userId}
+    if (preg_match('#^/api/update_user/(\d+)$#', $uri, $m) && $method === 'PUT') {
+        $userId = intval($m[1]);
+
+        // Appel du controller avec le userId récupéré
+        (new AuthController($rb, $redis))->updateUser($userId);
         exit;
     }
 
