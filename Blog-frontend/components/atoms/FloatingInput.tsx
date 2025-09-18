@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Ionicons } from '@expo/vector-icons'; // ou autre librairie d'icônes
+import { Ionicons } from '@expo/vector-icons';
 
 interface FloatingInputProps {
   label: string;
@@ -11,6 +11,8 @@ interface FloatingInputProps {
   keyboardType?: any;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   error?: string;
+  multiline?: boolean; // ✅ ajout
+  numberOfLines?: number; // ✅ optionnel pour fixer la hauteur
 }
 
 export const FloatingInput: React.FC<FloatingInputProps> = ({
@@ -21,6 +23,8 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   keyboardType,
   autoCapitalize,
   error,
+  multiline = false,
+  numberOfLines = 4, // valeur par défaut
 }) => {
   const { colors } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
@@ -71,6 +75,8 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
           secureTextEntry={secureTextEntry && !showPassword}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
+          multiline={multiline} // ✅ support
+          numberOfLines={multiline ? numberOfLines : 1} // ✅ ajuste hauteur
           style={[
             styles.input,
             {
@@ -81,8 +87,10 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
                 : colors.border,
               backgroundColor: colors.card,
               color: colors.text,
-              paddingTop: 20,
-              paddingRight: secureTextEntry ? 40 : 12, // espace pour l’icône
+              paddingTop: multiline ? 24 : 20, // ✅ plus d’espace en multiline
+              paddingRight: secureTextEntry ? 40 : 12,
+              height: multiline ? numberOfLines * 24 + 20 : 50, // ✅ hauteur dynamique
+              textAlignVertical: multiline ? 'top' : 'center', // ✅ important
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.1,
@@ -119,7 +127,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     fontSize: 16,
-    height: 50,
   },
   error: {
     fontSize: 12,

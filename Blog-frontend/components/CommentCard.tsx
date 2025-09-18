@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Comment } from '@/types';
+import { Comment } from '@/types__';
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface CommentCardProps {

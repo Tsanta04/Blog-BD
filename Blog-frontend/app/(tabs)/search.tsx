@@ -13,19 +13,20 @@ import { Href, router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { PostCard } from '@/components/PostCard';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/Button';
-import { Post } from '@/types';
-import { apiService } from '@/services__/apiService';
 import { backgorund } from '@/data/background';
+import { Post } from '@/utils/types';
+import { usePosts } from '@/hooks/usePosts';
 
 export default function SearchScreen() {
   const { colors } = useTheme();
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated,user } = useAuth();
+  const {toggleLike} = usePosts();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [isLiked, setIsLiked] = useState(false);
 
   const styles = StyleSheet.create({
     container: {
@@ -94,38 +95,22 @@ export default function SearchScreen() {
     }
   };
 
-  const toggleLike = async (postId: string) => {
-    if (!token) return;
-
-    const post = posts.find(p => p.id === postId);
-    if (!post) return;
-
+  const tLike = async (postId:number) => {
     try {
-      setPosts(prevPosts =>
-        prevPosts.map(p =>
-          p.id === postId
-            ? {
-                ...p,
-                isLiked: !p.isLiked,
-                likesCount: p.isLiked ? p.likesCount - 1 : p.likesCount + 1,
-              }
-            : p
-        )
-      );
-
-      if (post.isLiked) {
-        await apiService.unlikePost(postId, token);
-      } else {
-        await apiService.likePost(postId, token);
-      }
+      // Optimistically update UI
+      setIsLiked(prev => !prev);
+      await toggleLike(postId||0);
     } catch (error) {
-      setPosts(prevPosts =>
-        prevPosts.map(p =>
-          p.id === postId
-            ? { ...p, isLiked: post.isLiked, likesCount: post.likesCount }
-            : p
-        )
-      );
+      // Revert optimistic update on error
+      // setPost(prev => {
+      //   if (!prev) return prev;
+      //   return {
+      //     ...prev,
+      //     isLiked: post.isLiked,
+      //     likesCount: post.likesCount,
+      //   };
+      // });
+      console.error('Error toggling like:', error);
     }
   };
 
@@ -135,25 +120,13 @@ export default function SearchScreen() {
     } else {
       router.push({
         ...path,
-        params: { id: post.id },
+        params: { id: post.id|| "" },
       });
     }
   };
-
-
+  
   if (!isAuthenticated) {
-    return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>
-            Connectez-vous pour rechercher des articles
-          </Text>
-          <Button
-            title="Se connecter"
-            onPress={() => router.push('/login')}
-            size="large"
-          />
-        </View>
-    );
+    router.replace('/login');
   }
 
   return (
@@ -163,7 +136,7 @@ export default function SearchScreen() {
     >
       <FlatList
         data={posts}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item.id+""}
         contentContainerStyle={styles.content}
         ListHeaderComponent={() => (
           <View style={styles.header}>
@@ -183,6 +156,7 @@ export default function SearchScreen() {
         renderItem={({ item }) => (
           <PostCard
             post={item}
+            user_id={user?.id||""}
             onPress2={() => handlePostPress(item,'/post/[id]')}
             onPress1={() => handlePostPress(item,'/profile/[id]')}
             onLike={toggleLike}

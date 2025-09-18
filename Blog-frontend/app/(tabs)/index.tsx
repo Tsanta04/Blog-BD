@@ -16,9 +16,9 @@ import { usePosts } from '@/hooks/usePosts';
 import { PostCard } from '@/components/PostCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/Button';
-import { Post } from '@/types';
 import { Moon, Plus, Sun } from 'lucide-react-native';
 import { backgorund } from '@/data/background';
+import { Post } from '@/utils/types';
 
 export default function HomeScreen() {
   const { isAuthenticated, user } = useAuth();
@@ -116,29 +116,13 @@ export default function HomeScreen() {
     } else {
       router.push({
         ...path,
-        params: { id: post.id },
+        params: { id: post.id|| "" },
       });
     }
   };
 
   if (!isAuthenticated) {
-    return (
-      <SafeAreaView style={styles.container}>
-          <View style={styles.overlay}>
-            <View style={styles.authPrompt}>
-              <Text style={styles.authTitle}>Bienvenue sur Mini Blog</Text>
-              <Text style={styles.authSubtitle}>
-                Connectez-vous pour découvrir les derniers articles, liker et commenter
-              </Text>
-              <Button
-                title="Se connecter"
-                onPress={() => router.push('/login')}
-                size="large"
-              />
-            </View>
-          </View>
-      </SafeAreaView>
-    );
+    router.replace('/login');
   }
 
   if (loading && posts.length === 0) {
@@ -180,7 +164,7 @@ export default function HomeScreen() {
       <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}>
         <View style={styles.header}>
           <Text style={styles.title}>
-            Bonjour {user?.username} 👋
+            Bonjour {user?.name} 👋
           </Text>
           <Text style={styles.subtitle}>
             Découvrez les derniers articles
@@ -197,29 +181,34 @@ export default function HomeScreen() {
             <Moon size={24} color={colors.text} />
           )}
         </TouchableOpacity>      
-      </View>  
-      <FlatList
-        data={posts}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.content}
-        renderItem={({ item }) => (
-          <PostCard
-            post={item}
-            onPress2={() => handlePostPress(item,'/post/[id]')}
-            onPress1={() => handlePostPress(item,'/profile/[id]')}
-            onLike={toggleLike}
-          />
-        )}
-        refreshControl={
-          <RefreshControl
-            refreshing={loading}
-            onRefresh={refetch}
-            colors={[colors.primary]}
-            tintColor={colors.primary}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      />
+      </View>
+      {
+        posts.length === 0 && (
+        <FlatList
+          data={posts}
+          keyExtractor={(item) => item.id+""}
+          contentContainerStyle={styles.content}
+          renderItem={({ item }) => (
+            <PostCard
+              post={item}
+              user_id={user?.id||""}
+              onPress2={() => handlePostPress(item,'/post/[id]')}
+              onPress1={() => handlePostPress(item,'/profile/[id]')}
+              onLike={toggleLike}
+            />
+          )}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={refetch}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        />
+        ) 
+      }  
     {/* </View> */}
   </ImageBackground>    
   );

@@ -1,10 +1,13 @@
 export interface User {
-  user_id:string,
-  username: string;
+  id?:string,
+  name: string;
   email: string;
+  posts?: Post[],
   postsCount?:number,
+  likes?: User[],
   likesCount?:number,
-  commentsCount?:number
+  followers?: User[],
+  followersCount?:number
 }
 
 export interface AuthToken {
@@ -12,97 +15,60 @@ export interface AuthToken {
   refreshToken: string;
 }
 
-export type LocationType = {
-  id?:number;
-  latitude: number;
-  longitude: number;
-  city: string;
-  country: string;
-}
-
-export interface Ground {
-  id?: number;
-  name: string;
-  description: string;
-  cover_photo?: string;
-  culture_type_id?: number;
-  culture_type?: cropType,
-  location_id?:number,
-  location?: LocationType;
-  user_id: string;
-  qr_code?: string;
-  sensor_pack_id?: string;
-}
-
-export interface GroundState {
-  temperature: number;
-  health: number;
-  production_progress: number;
-  humidity: number;
-  fertility: number;
-  rentability: number;
-  date: string;
-}
-
-export interface cropType {
+export interface Post {
   id?: number,
-  type_:string
+  title: string,
+  content: string,
+  user_id: string,
+  user?: User,
+  tags?: Tags[],
+  medias?: Medias[],
+  comments?: Comments[],
+  commentsCount?:number,
+  likes?: User[],
+  likesCount?: number,
+  views?: User[],
+  viewsCount?:number,
+  createdAt: string,
 }
 
-export interface Planning {
-  id?: number;
-  title: string;
-  description: string;
-  start_date: Date;
-  end_date: Date;
-  status: 'pending' | 'in-progress' | 'completed';
-  ground_id?:number;
+export interface Tags {
+  id?: number,
+  tags: string
 }
 
-export interface GroundStatType {
-  temperature: number[],
-  health: number[],
-  humidity: number[],
-  fertility: number[],
-  productivity: number[],
-  rentability: number[],  
+export interface Type_medias {
+  id?:number,
+  type_: string
 }
 
-export interface NotificationState {
-  temperature: number;
-  health: number;
-  production_progress: number;
-  humidity: number;
-  fertility: number;
-  rentability: number;
+export interface Medias {
+  id?: number,
+  path_name: string,
+  type_id: number,
+  type_: Type_medias
 }
 
-export interface Notification {
-  id: number;
-  date: string;
-  title: string;
-  description: string;
-  type: string;
-  level: string; // "low" | "medium" | "high" | "critical"
-  recommandation: string;
-  is_seen: boolean;
-  state_id: number;
-  ground_id: number;
-  state?: NotificationState;
+export interface Comments {
+  id?: number,
+  content: string,
+  post_id: number,
+  user_id: string,
+  user?: User,
+  post?: Post
 }
 
-export interface Message {
-  id?: string;
-  userId: string;
-  text: string;
-  isUser: boolean;
-  timestamp: Date;
+export interface Likes_posts {
+  user_id: string,
+  post_id: number,  
 }
 
-export interface ApiMessage {
-  id: number;
-  sender_id: string | null;
-  content: string;
-  date: string | null;
-  receiver_id: string | null;
+export interface Likes_users {
+  user_id: string,
+  liker_id: string,  
+}
+
+export interface Follower_user {
+  user_id: string,
+  follower_id: string,  
 }

@@ -14,17 +14,19 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { FloatingInput } from '@/components/atoms/FloatingInput';
-import { backgorund } from '@/data/background';
-// import { apiService } from '@/services/apiService';
+import { Medias, Post } from '@/utils/types';
+import { usePosts } from '@/hooks/usePosts';
 
 export default function CreatePostScreen() {
   const { colors } = useTheme();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const { create } = usePosts();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [mediaUrl, setMediaUrl] = useState('');
+  const [mediaType, setMediaType] = useState('image'); // exemple: image, video, etc.
   const [loading, setLoading] = useState(false);
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -49,7 +51,7 @@ export default function CreatePostScreen() {
     },
     subtitle: { fontSize: 16, color: '#f0f0f0', textAlign: 'center' },
     form: {
-      backgroundColor:colors.card,      
+      backgroundColor: colors.card,
       borderRadius: 16,
       padding: 16,
       shadowColor: '#000',
@@ -72,24 +74,45 @@ export default function CreatePostScreen() {
   const handlePublish = async () => {
     if (!validateForm()) return;
 
-    if (!token) {
+    if (!token || !user) {
       Alert.alert('Erreur', 'Vous devez être connecté pour publier.');
       return;
     }
 
     try {
       setLoading(true);
-      // await apiService.createPost({
-      //   title,
-      //   content,
-      //   tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
-      //   imageUrl: imageUrl.trim() || undefined,
-      // }, token);
+
+      // Construction du Post à envoyer
+      const newPost: Post = {
+        title,
+        content,
+        user_id: user.id||"", // vient de AuthContext
+        tags: tags
+          .split(',')
+          .map(tag => ({ tags: tag.trim() }))
+          .filter(tagObj => tagObj.tags !== ''),
+        medias: mediaUrl
+          ? [
+              {
+                path_name: mediaUrl.trim(),
+                type_id: 1, // à ajuster selon ton backend
+                type_: { id: 1, type_: mediaType },
+              } as Medias,
+            ]
+          : [],
+        createdAt: new Date().toISOString(),
+      };
+
+      // Appel API
+      await create(newPost);
 
       Alert.alert('Succès', 'Article publié avec succès !');
       router.back();
     } catch (err) {
-      Alert.alert('Erreur', err instanceof Error ? err.message : 'Impossible de publier l’article.');
+      Alert.alert(
+        'Erreur',
+        err instanceof Error ? err.message : 'Impossible de publier l’article.'
+      );
     } finally {
       setLoading(false);
     }
@@ -101,7 +124,9 @@ export default function CreatePostScreen() {
       style={{ flex: 1 }}
     >
       <ImageBackground
-        source={{ uri: 'https://i.pinimg.com/originals/aa/ae/e0/aaaee0993b2e9764221e19d7f1e9131f.jpg' }}
+        source={{
+          uri: 'https://i.pinimg.com/originals/aa/ae/e0/aaaee0993b2e9764221e19d7f1e9131f.jpg',
+        }}
         style={styles.background}
       >
         <View style={styles.overlay}>
@@ -128,7 +153,7 @@ export default function CreatePostScreen() {
                 label="Contenu"
                 value={content}
                 onChangeText={setContent}
-                // multiline
+                multiline
                 error={errors.content}
               />
 
@@ -139,9 +164,15 @@ export default function CreatePostScreen() {
               />
 
               <FloatingInput
-                label="URL de l'image"
-                value={imageUrl}
-                onChangeText={setImageUrl}
+                label="URL du média"
+                value={mediaUrl}
+                onChangeText={setMediaUrl}
+              />
+
+              <FloatingInput
+                label="Type du média (image, video, ...)"
+                value={mediaType}
+                onChangeText={setMediaType}
               />
 
               <Button

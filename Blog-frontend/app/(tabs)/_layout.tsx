@@ -93,7 +93,7 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
-        name="popular"
+        name="search"
         options={{
           tabBarIcon: ({ color, size, focused }) => renderTabIcon(Search, color, size, focused),
         }}

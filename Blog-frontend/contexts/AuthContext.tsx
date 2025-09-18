@@ -32,7 +32,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<AuthToken | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     loadStoredAuth();
@@ -101,7 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if(!user)return
     try {
       setIsLoading(true);
-      const user_ = await update(user.user_id , username , email)
+      const user_ = await update(user?.id||"" , username , email)
       setUser(user_ ?? { email });
       await AsyncStorage.setItem("user", JSON.stringify(user_ ?? { email }));
 

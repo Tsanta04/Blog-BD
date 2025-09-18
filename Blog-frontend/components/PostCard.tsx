@@ -1,19 +1,21 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Heart, MessageCircle, Eye } from 'lucide-react-native';
-import { Post } from '@/types';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Card } from './ui/Card';
+import { Post } from '@/utils/types';
 
 interface PostCardProps {
   post: Post;
+  user_id:string,
   onPress1: () => void;
   onPress2: () => void;  
-  onLike: (postId: string) => void;
+  onLike: (postId: number) => void;
 }
 
-export function PostCard({ post, onPress1, onPress2, onLike }: PostCardProps) {
+export function PostCard({ post,user_id, onPress1, onPress2, onLike }: PostCardProps) {
   const { colors } = useTheme();
+  const isLiked = post.likes?.some(u => u.id === user_id);  
 
   const styles = StyleSheet.create({
     header: {
@@ -124,18 +126,18 @@ export function PostCard({ post, onPress1, onPress2, onLike }: PostCardProps) {
         <View style={styles.header}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
-              {getInitials(post.author.username)}
+              {getInitials(post.user?.name||"")}
             </Text>
           </View>
           <View style={styles.authorInfo}>
-            <Text style={styles.authorName}>{post.author.username}</Text>
+            <Text style={styles.authorName}>{post.user?.name}</Text>
             <Text style={styles.date}>{formatDate(post.createdAt)}</Text>
           </View>
         </View>
       </TouchableOpacity>      
       <TouchableOpacity onPress={onPress2} activeOpacity={0.8}>
         <Text style={styles.title}>{post.title}</Text>
-        <Text style={styles.excerpt}>{post.excerpt}</Text>
+        <Text style={styles.excerpt}>{post.user?.email}</Text>
 
         <Image
           source={{
@@ -149,11 +151,11 @@ export function PostCard({ post, onPress1, onPress2, onLike }: PostCardProps) {
           resizeMode="cover"
         />
 
-        {post.tags.length > 0 && (
+        {post.tags && post.tags.length > 0 && (
           <View style={styles.tags}>
             {post.tags.map((tag, index) => (
               <View key={index} style={styles.tag}>
-                <Text style={styles.tagText}>#{tag}</Text>
+                <Text style={styles.tagText}>#{tag.tags}</Text>
               </View>
             ))}
           </View>
@@ -163,18 +165,18 @@ export function PostCard({ post, onPress1, onPress2, onLike }: PostCardProps) {
       <View style={styles.actions}>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => onLike(post.id)}
+          onPress={() => onLike(post.id||0)}
           activeOpacity={0.7}
         >
           <Heart
             size={18}
-            color={post.isLiked ? colors.error : colors.subtext}
-            fill={post.isLiked ? colors.error : 'transparent'}
+            color={isLiked ? colors.error : colors.subtext}
+            fill={isLiked ? colors.error : 'transparent'}
           />
           <Text
             style={[
               styles.actionText,
-              post.isLiked && styles.likedText,
+              isLiked && styles.likedText,
             ]}
           >
             {post.likesCount}

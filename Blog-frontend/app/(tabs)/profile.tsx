@@ -172,23 +172,9 @@ export default function ProfileScreen() {
       ]
     );
   };
-
+  
   if (!isAuthenticated) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.authPrompt}>
-          <Text style={styles.authTitle}>Profil Utilisateur</Text>
-          <Text style={styles.authSubtitle}>
-            Connectez-vous pour accéder à votre profil et gérer vos préférences
-          </Text>
-          <Button
-            title="Se connecter"
-            onPress={() => router.push('/login')}
-            size="large"
-          />
-        </View>
-      </SafeAreaView>
-    );
+    router.replace('/login');
   }
 
   return (
@@ -200,10 +186,10 @@ export default function ProfileScreen() {
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
-              {user ? getInitials(user.username) : 'U'}
+              {user ? getInitials(user.name) : 'U'}
             </Text>
           </View>
-          <Text style={styles.username}>{user?.username}</Text>
+          <Text style={styles.username}>{user?.name}</Text>
           <Text style={styles.email}>{user?.email}</Text>
         </View>
 
@@ -218,8 +204,8 @@ export default function ProfileScreen() {
             <Text style={styles.statLabel}>Likes</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statNumber}>{user?.commentsCount ?? 0}</Text>
-            <Text style={styles.statLabel}>Commentaires</Text>
+            <Text style={styles.statNumber}>{user?.followersCount ?? 0}</Text>
+            <Text style={styles.statLabel}>Abonnés</Text>
           </View>
         </View>
 

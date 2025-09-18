@@ -1,4 +1,4 @@
-import { Post, Comment } from '@/types';
+import { Post, Comment } from '@/types__';
 import { mockPosts, mockComments } from '@/data/mockData';
 
 const API_BASE_URL = 'https://your-api-domain.com/api'; // Replace with your actual API URL
@@ -85,33 +85,33 @@ class ApiService {
     }
   }
 
-  async addComment(
-    postId: string,
-    content: string,
-    token: string
-  ): Promise<Comment> {
-    try {
-      return await this.request<Comment>(
-        `/posts/${postId}/comments`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ content }),
-        },
-        token
-      );
-    } catch (error) {
-      console.warn('API call failed, using mock response:', error);
-      // Return a mock comment
-      return {
-        id: Date.now().toString(),
-        content,
-        author: { id: '1', email: 'user@example.com', username: 'Current User', createdAt: new Date().toISOString() },
-        postId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-    }
-  }
+  // async addComment(
+  //   postId: string,
+  //   content: string,
+  //   token: string
+  // ): Promise<Comment> {
+  //   try {
+  //     return await this.request<Comment>(
+  //       `/posts/${postId}/comments`,
+  //       {
+  //         method: 'POST',
+  //         body: JSON.stringify({ content }),
+  //       },
+  //       token
+  //     );
+  //   } catch (error) {
+  //     console.warn('API call failed, using mock response:', error);
+  //     // Return a mock comment
+  //     return {
+  //       id: Date.now().toString(),
+  //       content,
+  //       author: { id: '1', email: 'user@example.com', username: 'Current User', createdAt: new Date().toISOString() },
+  //       postId,
+  //       createdAt: new Date().toISOString(),
+  //       updatedAt: new Date().toISOString(),
+  //     };
+  //   }
+  // }
 
   async getPopularPosts(token?: string): Promise<Post[]> {
     try {
@@ -122,6 +122,7 @@ class ApiService {
       return [...mockPosts].sort((a, b) => b.likesCount - a.likesCount);
     }
   }
+
 }
 
 export const apiService = new ApiService();

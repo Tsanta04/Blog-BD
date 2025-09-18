@@ -16,23 +16,25 @@ import { ArrowLeft, Heart, MessageCircle, Eye } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useComments } from '@/hooks/useComments';
-import { Post } from '@/types';
-import { apiService } from '@/services__/apiService';
 import { CommentCard } from '@/components/CommentCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { Post } from '@/utils/types';
+import { usePosts } from '@/hooks/usePosts';
 
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
-  const { token } = useAuth();
-  const { comments, loading: commentsLoading, addComment, submitting } = useComments(id || '');
+  const { token,user } = useAuth();
+  const { comments, loading: commentsLoading, addComment, submitting } = useComments(Number(id) || 0);
+  const {getPost, toggleLike} = usePosts();
   
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
+  const [isLiked, setIsLiked] = useState(false);
 
   const styles = StyleSheet.create({
     container: {
@@ -181,8 +183,10 @@ export default function PostDetailScreen() {
     try {
       setLoading(true);
       setError(null);
-      const fetchedPost = await apiService.getPost(id, token?.accessToken || undefined);
+      const fetchedPost: Post = await getPost(Number(id));
       setPost(fetchedPost);
+      const isLkd = fetchedPost.likes?.some(u => u.id === user?.id);  
+      setIsLiked(!!isLkd);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch post');
     } finally {
@@ -190,36 +194,23 @@ export default function PostDetailScreen() {
     }
   };
 
-  const toggleLike = async () => {
+  const tLike = async () => {
     if (!post || !token) return;
 
     try {
       // Optimistically update UI
-      setPost(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          isLiked: !prev.isLiked,
-          likesCount: prev.isLiked ? prev.likesCount - 1 : prev.likesCount + 1,
-        };
-      });
-
-      // Make API call
-      if (post.isLiked) {
-        await apiService.unlikePost(post.id, token.accessToken);
-      } else {
-        await apiService.likePost(post.id, token.accessToken);
-      }
+      setIsLiked(prev => !prev);
+      await toggleLike(post.id||0);
     } catch (error) {
       // Revert optimistic update on error
-      setPost(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          isLiked: post.isLiked,
-          likesCount: post.likesCount,
-        };
-      });
+      // setPost(prev => {
+      //   if (!prev) return prev;
+      //   return {
+      //     ...prev,
+      //     isLiked: post.isLiked,
+      //     likesCount: post.likesCount,
+      //   };
+      // });
       console.error('Error toggling like:', error);
     }
   };
@@ -320,11 +311,11 @@ export default function PostDetailScreen() {
             <View style={styles.postHeader}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
-                  {getInitials(post.author.username)}
+                  {getInitials(post.user?.name||"")}
                 </Text>
               </View>
               <View style={styles.authorInfo}>
-                <Text style={styles.authorName}>{post.author.username}</Text>
+                <Text style={styles.authorName}>{post.user?.name}</Text>
                 <Text style={styles.date}>{formatDate(post.createdAt)}</Text>
               </View>
             </View>
@@ -342,11 +333,11 @@ export default function PostDetailScreen() {
                     }}
                     resizeMode="cover"
                   />
-            {post.tags.length > 0 && (
+            {post.tags && post.tags.length > 0 && (
               <View style={styles.tags}>
                 {post.tags.map((tag, index) => (
                   <View key={index} style={styles.tag}>
-                    <Text style={styles.tagText}>#{tag}</Text>
+                    <Text style={styles.tagText}>#{tag.tags}</Text>
                   </View>
                 ))}
               </View>
@@ -355,18 +346,18 @@ export default function PostDetailScreen() {
             <View style={styles.actions}>
               <TouchableOpacity
                 style={styles.actionButton}
-                onPress={toggleLike}
+                onPress={tLike}
                 activeOpacity={0.7}
               >
                 <Heart
                   size={20}
-                  color={post.isLiked ? colors.error : colors.subtext}
-                  fill={post.isLiked ? colors.error : 'transparent'}
+                  color={isLiked ? colors.error : colors.subtext}
+                  fill={isLiked ? colors.error : 'transparent'}
                 />
                 <Text
                   style={[
                     styles.actionText,
-                    post.isLiked && styles.likedText,
+                    isLiked && styles.likedText,
                   ]}
                 >
                   {post.likesCount}
