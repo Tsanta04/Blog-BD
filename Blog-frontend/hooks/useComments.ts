@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Comment } from '@/types__';
-import { apiService } from '@/services/api/apiService';
 import { useAuth } from '@/contexts/AuthContext';
-import { commentPost, getPostComment } from '@/services/api/comment.api';
+import { commentPost, getPostComment, updateComment as apiUpdateComment } from '@/services/api/comment.api';
 import { Comments } from '@/utils/types';
 
 export function useComments(postId: number) {
@@ -13,10 +12,12 @@ export function useComments(postId: number) {
   const { token, user } = useAuth();
 
   const fetchComments = async () => {
+    if (!token) return; // sécuriser l'accès
+
     try {
       setLoading(true);
       setError(null);
-      const fetchedComments = await getPostComment(postId);
+      const fetchedComments = await getPostComment(postId, token.accessToken);
       setComments(fetchedComments);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch comments');
@@ -26,41 +27,46 @@ export function useComments(postId: number) {
   };
 
   const addComment = async (content: string) => {
-    if (!token || !content.trim()) return;
+    if (!token || !content.trim() || !user) return;
 
     try {
       setSubmitting(true);
       const newComment = await commentPost({
         content: content,
         post_id: postId,
-        user_id: user?.id || ""
-      })
+        user_id: user.id||""
+      }, token.accessToken);
+
       setComments(prevComments => [...prevComments, newComment]);
-    } catch (error) {
-      console.error('Error adding comment:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error adding comment:', err);
+      throw err;
     } finally {
       setSubmitting(false);
     }
   };
 
-  const updateComment = async (coms: Comments) => {
+  const updateCommentLocal = async (coms: Comments) => {
     if (!token || !coms.content.trim()) return;
 
     try {
       setSubmitting(true);
-      const newComment = await commentPost(coms)
-      setComments(prevComments => [...prevComments, newComment]);
-    } catch (error) {
-      console.error('Error adding comment:', error);
-      throw error;
+      const updatedComment = await apiUpdateComment(coms, token.accessToken);
+
+      // mettre à jour le commentaire dans le tableau
+      setComments(prevComments => prevComments.map(c => 
+        c.id === updatedComment.id ? updatedComment : c
+      ));
+    } catch (err) {
+      console.error('Error updating comment:', err);
+      throw err;
     } finally {
       setSubmitting(false);
     }
-  };  
+  };
 
   useEffect(() => {
-    if (postId) {
+    if (postId && token) {
       fetchComments();
     }
   }, [postId, token]);
@@ -71,7 +77,7 @@ export function useComments(postId: number) {
     error,
     submitting,
     addComment,
-    updateComment,
+    updateComment: updateCommentLocal,
     refetch: fetchComments,
   };
 }
