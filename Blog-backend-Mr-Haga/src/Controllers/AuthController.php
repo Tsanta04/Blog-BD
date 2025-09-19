@@ -1,14 +1,12 @@
 <?php
 namespace App\Controllers;
-
 use App\Utils\Response;
+use RedBeanPHP\R;
 
 class AuthController {
     private $rb;
-    private $redis;
 
-    public function __construct($rb, $redis) {
-        $this->rb = $rb;
+    public function __construct($redis) {
         $this->redis = $redis;
     }
 
@@ -37,10 +35,10 @@ class AuthController {
             return Response::json(['error'=>'Missing fields'], 400);
         }
 
-        $existing = R::findOne('user', 'email = ?', [$b['email']]);
+        $existing = R::findOne('users', 'email = ?', [$b['email']]);
         if ($existing) return Response::json(['error'=>'Email exists'], 409);
 
-        $u = R::dispense('user');
+        $u = R::dispense('users');
         $u->name = $b['name'];
         $u->email = $b['email'];
         $u->password = password_hash($b['password'], PASSWORD_DEFAULT);

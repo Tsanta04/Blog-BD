@@ -3,7 +3,7 @@ import { baseUrl } from ".";
 // --- me() : récupère l'utilisateur connecté ---
 export const me = async (accessToken: string) => {
   try {
-    const res = await fetch(`${baseUrl}/me`, {
+    const res = await fetch(`${baseUrl}/me_`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

@@ -23,14 +23,14 @@
 
     // Auth
     if ($uri === '/api/login' && $method === 'POST') {
-        (new AuthController($rb, $redis))->login(); exit;
+        (new AuthController($redis))->login(); exit;
     }
 
     if ($uri === '/api/register' && $method === 'POST') {
-        (new AuthController($rb, $redis))->register(); exit;
+        (new AuthController($redis))->register(); exit;
     }
 
-    if ($uri === '/api/me' && $method === 'POST') {
+    if ($uri === '/api/me_' && $method === 'POST') {
         AuthMiddleware::guard($redis, fn($userId) => (new AuthController($rb, $redis))->me()); exit;
     }
 

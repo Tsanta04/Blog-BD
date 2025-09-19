@@ -27,7 +27,7 @@ CREATE TABLE posts (
 -- ====================
 CREATE TABLE tags (
     id SERIAL PRIMARY KEY,
-    tags VARCHAR(200) NOT NULL,
+    tags VARCHAR(200) NOT NULL
 );
 
 -- ====================
@@ -35,7 +35,7 @@ CREATE TABLE tags (
 -- ====================
 CREATE TABLE types_medias (
     id SERIAL PRIMARY KEY,
-    type_ VARCHAR(200) NOT NULL,
+    type_ VARCHAR(200) NOT NULL
 );
 
 -- ====================
@@ -58,7 +58,7 @@ CREATE TABLE medias (
     post_id INT NOT NULL,
     type_id INT NOT NULL,    
     CONSTRAINT fk_posts_medias FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
-    CONSTRAINT fk_types_medias FOREIGN KEY (type_id) REFERENCES types_medias(id) ON DELETE NULL
+    CONSTRAINT fk_types_medias FOREIGN KEY (type_id) REFERENCES types_medias(id) ON DELETE CASCADE
 );
 
 -- ====================
@@ -105,7 +105,7 @@ CREATE TABLE likes_users (
     user_id INT NOT NULL,
     liker_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT now(),
-    PRIMARY KEY (user_id, post_id),
+    PRIMARY KEY (user_id, liker_id),
     CONSTRAINT fk_likes_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_likes_likers FOREIGN KEY (liker_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -117,7 +117,7 @@ CREATE TABLE followers (
     user_id INT NOT NULL,
     follower_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT now(),
-    PRIMARY KEY (user_id, post_id),
+    PRIMARY KEY (user_id, follower_id),
     CONSTRAINT fk_likes_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_follower_user FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE
 );
