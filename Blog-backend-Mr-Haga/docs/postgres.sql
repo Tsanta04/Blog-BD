@@ -77,7 +77,7 @@ CREATE TABLE comments (
 -- ====================
 -- TABLE: likes (relation n-n)
 -- ====================
-CREATE TABLE likes (
+CREATE TABLE likes_posts (
     user_id INT NOT NULL,
     post_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT now(),
@@ -96,4 +96,28 @@ CREATE TABLE views (
     PRIMARY KEY (user_id, post_id),
     CONSTRAINT fk_likes_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_likes_post FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+);
+
+-- ====================
+-- TABLE: likes (relation n-n)
+-- ====================
+CREATE TABLE likes_users (
+    user_id INT NOT NULL,
+    liker_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT now(),
+    PRIMARY KEY (user_id, post_id),
+    CONSTRAINT fk_likes_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_likes_likers FOREIGN KEY (liker_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ====================
+-- TABLE: followers (relation n-n)
+-- ====================
+CREATE TABLE followers (
+    user_id INT NOT NULL,
+    follower_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT now(),
+    PRIMARY KEY (user_id, post_id),
+    CONSTRAINT fk_likes_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_follower_user FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE
 );
