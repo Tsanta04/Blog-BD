@@ -10,12 +10,11 @@ export function usePosts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { token,user } = useAuth();
-
   const fetchPosts = async () => {
     try {
       setLoading(true);
       setError(null);
-      const fetchedPosts = await getPostsUser(user?.id||"")
+      const fetchedPosts = await getPostsUser(user?.id || "", token?.accessToken);
       setPosts(fetchedPosts);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch posts');
@@ -24,50 +23,47 @@ export function usePosts() {
     }
   };
 
-  const fetchPost = async (post_id:number) => {
+  const fetchPost = async (post_id: number) => {
     try {
       setLoading(true);
       setError(null);
-      const fetchedPosts = await getPost(post_id)
-      setPosts(fetchedPosts);
+      const fetchedPost = await getPost(post_id, token?.accessToken);
+      setPosts([fetchedPost]); // remplacer ou merge selon besoin
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch posts');
+      setError(err instanceof Error ? err.message : 'Failed to fetch post');
     } finally {
       setLoading(false);
     }
-  };  
+  };
 
-  const create = async (post:Post) => {
+  const create = async (post: Post) => {
     try {
       setLoading(true);
-      const newComment = await createPost({...post});
-
+      const newPost = await createPost(post, token?.accessToken);
+      setPosts(prev => [...prev, newPost]);
     } catch (error) {
-      console.error('Error adding comment:', error);
+      console.error('Error creating post:', error);
       throw error;
     } finally {
-      setLoading(false)
-    }    
-  }  
+      setLoading(false);
+    }
+  };
 
   const toggleLike = async (postId: number) => {
     if (!token) return;
-
     const post = posts.find(p => p.id === postId);
     if (!post) return;
 
     try {
-      // Optimistically update UI
       setPosts(prevPosts =>
         prevPosts.map(p => {
           if (p.id === postId) {
             const alreadyLiked = p.likes?.some(u => u.id === user?.id);
-
             return {
               ...p,
               likes: alreadyLiked
-                ? p.likes?.filter(u => u.id !== user?.id) // retirer le like
-                : [...(p.likes ?? []), { id: user?.id } as User], // ajouter le like
+                ? p.likes?.filter(u => u.id !== user?.id)
+                : [...(p.likes ?? []), { id: user?.id } as User],
               likesCount: alreadyLiked
                 ? (p.likesCount ?? 0) - 1
                 : (p.likesCount ?? 0) + 1,
@@ -77,24 +73,14 @@ export function usePosts() {
         })
       );
 
-      // Ensuite appeler l'API en arrière-plan
-      (async () => {
-        const alreadyLiked = posts.find(p => p.id === postId)?.likes?.some(u => u.id === user?.id);
-
-        try {
-          if (alreadyLiked) {
-            await unlike_post({ post_id: postId, user_id: user?.id || "" });
-          } else {
-            await like_post({ post_id: postId, user_id: user?.id || "" });
-          }
-        } catch (err) {
-          console.error("Erreur lors du like/unlike", err);
-          // éventuellement rollback l'UI si nécessaire
-        }
-      })();
+      const alreadyLiked = post.likes?.some(u => u.id === user?.id);
+      if (alreadyLiked) {
+        await unlike_post({ post_id: postId, user_id: user?.id || "" }, token.accessToken);
+      } else {
+        await like_post({ post_id: postId, user_id: user?.id || "" }, token.accessToken);
+      }
 
     } catch (error) {
-
       console.error('Error toggling like:', error);
     }
   };

@@ -21,141 +21,83 @@
     $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     $uri = rtrim($uri, '/');
 
-    // simple routing (for demo purposes)
-    if ($uri === '/api/me' && $method === 'POST') {
-        AuthMiddleware::guard($redis, function($userId) use($mongo,$redis){ 
-            (new AuthController($rb, $redis))->me();
-        });
-        exit;
-    }
-
+    // Auth
     if ($uri === '/api/login' && $method === 'POST') {
-        (new AuthController($rb, $redis))->login();
-        exit;
+        (new AuthController($rb, $redis))->login(); exit;
     }
 
     if ($uri === '/api/register' && $method === 'POST') {
-        (new AuthController($rb, $redis))->register();
-        exit;
+        (new AuthController($rb, $redis))->register(); exit;
+    }
+
+    if ($uri === '/api/me' && $method === 'POST') {
+        AuthMiddleware::guard($redis, fn($userId) => (new AuthController($rb, $redis))->me()); exit;
     }
 
     if ($uri === '/api/logout' && $method === 'POST') {
-        AuthMiddleware::guard($redis, function($userId) use($mongo,$redis){ 
-            (new AuthController($rb, $redis))->logout();
-        });
-        exit;
+        AuthMiddleware::guard($redis, fn($userId) => (new AuthController($rb, $redis))->logout()); exit;
     }
 
-    // PUT /api/update_user/{userId}
     if (preg_match('#^/api/update_user/(\d+)$#', $uri, $m) && $method === 'PUT') {
         $userId = intval($m[1]);
-
-        // Appel du controller avec le userId récupéré
-        (new AuthController($rb, $redis))->updateUser($userId);
-        exit;
+        (new AuthController($rb, $redis))->updateUser($userId); exit;
     }
 
-    // posts list & create
-    if ($uri === '/api/posts') {
-        if ($method === 'GET') { 
-            (new PostController($rb, $mongo, $redis))->index(); exit; 
-        }
-        if ($method === 'POST') { 
-            AuthMiddleware::guard($redis, function($userId) use($rb,$mongo,$redis){ 
-                (new PostController($rb,$mongo,$redis))->create($userId); 
-            }); 
-            exit; 
-        }
-    }
-
-    // post details
-    if (preg_match('#^/api/posts/(\d+)$#', $uri, $m) && $method === 'GET') {
-        $id = intval($m[1]); 
-        (new PostController($rb,$mongo,$redis))->show($id); exit;
-    }
-
-    // GET /api/posts
+    // Posts
     if ($uri === '/api/posts' && $method === 'GET') {
-        (new PostController($mongo, $redis))->index();
-        exit;
+        (new PostController($rb, $mongo, $redis))->index(); exit;
     }
 
-    // POST /api/posts (protected)
     if ($uri === '/api/posts' && $method === 'POST') {
-        AuthMiddleware::guard($redis, function($userId) use($mongo,$redis){ 
-            (new PostController($mongo,$redis))->create($userId); 
-        });
+        AuthMiddleware::guard($redis, fn($userId) => (new PostController($rb, $mongo, $redis))->create($userId)); exit;
+    }
+
+    if (preg_match('#^/api/posts/(\d+)$#', $uri, $m)) {
+        $id = intval($m[1]);
+        switch ($method) {
+            case 'GET': (new PostController($rb, $mongo, $redis))->show($id); break;
+            case 'PUT':
+                AuthMiddleware::guard($redis, fn($userId) => (new PostController($rb, $mongo, $redis))->update($userId, $id));
+                break;
+            case 'DELETE':
+                AuthMiddleware::guard($redis, fn($userId) => (new PostController($rb, $mongo, $redis))->delete($userId, $id));
+                break;
+        }
         exit;
     }
 
-    // GET /api/posts/{id}
-    if (preg_match('#^/api/posts/([0-9a-fA-F]{24})$#', $uri, $m) && $method === 'GET') {
-        $id = $m[1];
-        (new PostController($mongo, $redis))->show($id);
+    // Comments
+    if (preg_match('#^/api/posts/(\d+)/comments$#', $uri, $m)) {
+        $postId = intval($m[1]);
+        if ($method === 'GET') (new CommentController($mongo))->index($postId);
+        if ($method === 'POST') AuthMiddleware::guard($redis, fn($userId) => (new CommentController($rb))->create($userId, $postId));
         exit;
     }
 
-    // PUT /api/posts/{id} (protected)
-    if (preg_match('#^/api/posts/([0-9a-fA-F]{24})$#', $uri, $m) && $method === 'PUT') {
-        $id = $m[1];
-        AuthMiddleware::guard($redis, function($userId) use($mongo,$redis,$id){ 
-            (new PostController($mongo,$redis))->update($userId,$id); 
-        });
-        exit;
-    }
-
-    // DELETE /api/posts/{id} (protected)
-    if (preg_match('#^/api/posts/([0-9a-fA-F]{24})$#', $uri, $m) && $method === 'DELETE') {
-        $id = $m[1];
-        AuthMiddleware::guard($redis, function($userId) use($mongo,$redis,$id){ 
-            (new PostController($mongo,$redis))->delete($userId,$id); 
-        });
-        exit;
-    }
-
-
-    // comments
-    if (preg_match('#^/api/posts/(\d+)/comments$#', $uri, $m) && $method === 'POST') {
-        $postId = intval($m[1]); 
-        AuthMiddleware::guard($redis, function($userId) use($rb,$postId){ (new CommentController($rb))->create($userId,$postId); }); exit;
-    }
-
-    // GET /api/posts/{postId}/comments
-    if (preg_match('#^/api/posts/(\w+)/comments$#', $uri, $m) && $method === 'GET') {
-        $postId = $m[1];
-        (new CommentController($mongo))->index($postId);
-        exit;
-    }
-
-    // PUT /api/comments/{commentId}
-    if (preg_match('#^/api/comments/(\w+)$#', $uri, $m) && $method === 'PUT') {
+    if (preg_match('#^/api/comments/(\w+)$#', $uri, $m)) {
         $commentId = $m[1];
-        AuthMiddleware::guard($redis, function($userId) use($rb,$mongo,$commentId){ (new CommentController($rb,$mongo))->update($userId,$commentId); }); exit;
+        switch ($method) {
+            case 'PUT': AuthMiddleware::guard($redis, fn($userId) => (new CommentController($rb,$mongo))->update($userId, $commentId)); break;
+            case 'DELETE': AuthMiddleware::guard($redis, fn($userId) => (new CommentController($rb,$mongo))->delete($userId, $commentId)); break;
+        }
         exit;
     }
 
-    // DELETE /api/comments/{commentId}
-    if (preg_match('#^/api/comments/(\w+)$#', $uri, $m) && $method === 'DELETE') {
-        $commentId = $m[1];
-        AuthMiddleware::guard($redis, function($userId) use($rb,$mongo,$commentId){ (new CommentController($rb,$mongo))->delete($userId,$commentId); }); exit;
-        (new CommentController($mongo))->delete($userId, $commentId);
+    // Likes
+    if (preg_match('#^/api/like_post/(\d+)$#', $uri, $m)) {
+        $postId = intval($m[1]);
+        switch ($method) {
+            case 'POST': AuthMiddleware::guard($redis, fn($userId) => (new LikeController($rb,$redis))->like($userId, $postId)); break;
+            case 'DELETE': AuthMiddleware::guard($redis, fn($userId) => (new LikeController($rb,$redis))->unlike($userId, $postId)); break;
+        }
         exit;
-    }
-    
-    // like
-    if (preg_match('#^/api/posts/(\d+)/like$#', $uri, $m) && $method === 'POST') {
-        $postId = intval($m[1]); 
-        AuthMiddleware::guard($redis, function($userId) use($rb,$redis,$postId){ (new LikeController($rb,$redis))->toggle($userId,$postId); }); exit;
     }
 
-    // GET /api/posts/{postId}/likes → list users who liked the post
-    if (preg_match('#^/api/posts/(\w+)/likes$#', $uri, $m) && $method === 'GET') {
-        $postId = $m[1];
-        (new LikeController($mongo, $redis, $rb))->listUsers($postId);
-        exit;
+    if (preg_match('#^/api/like_post/(\d+)$#', $uri, $m) && $method === 'GET') {
+        $postId = intval($m[1]);
+        (new LikeController($rb, $mongo, $redis))->listUsers($postId); exit;
     }
 
     http_response_code(404);
     echo json_encode(["error" => "Not found"]);
-
 ?>

@@ -41,6 +41,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const loadStoredAuth = async () => {
+    setIsLoading(true);
     try {
       const storedUser = await AsyncStorage.getItem('user');
       const storedToken = await AsyncStorage.getItem('token');
@@ -68,6 +69,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signIn = async (email: string, password: string) => {
+    setIsLoading(true);
     try {
       const { user: loggedUser, token: authToken } = await logIn(email, password);
 
@@ -79,10 +81,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Sign in failed:', error);
       throw error;
+    }finally{
+      setIsLoading(false)
     }
   };
 
   const signUp = async (username: string, email: string, password: string) => {
+    setIsLoading(true);
     try {
       const { user: newUser, token: authToken } = await register(username, email, password);
 
@@ -94,10 +99,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Sign up failed:', error);
       throw error;
+    } finally{
+      setIsLoading(false)
     }
   };
 
   const signOut = async () => {
+    setIsLoading(true)
     try {
       setUser(null);
       setToken(null);
@@ -106,11 +114,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await logOut();
     } catch (error) {
       console.error('Error signing out:', error);
+    } finally{
+      setIsLoading(false)
     }
   };
 
   const updateUser = async (username: string, email: string) => {
     if (!user || !token) return;
+    setIsLoading(true)
     try {
       setIsLoading(true);
       const updatedUser = await update(user.id||"", username, email, token.accessToken);

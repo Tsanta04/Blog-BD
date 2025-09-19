@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -121,9 +121,12 @@ export default function HomeScreen() {
     }
   };
 
-  if (!isAuthenticated) {
-    router.replace('/login');
-  }
+  useEffect(() => {
+    // We only want to navigate away after the initial auth check is complete.
+    if (!isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated]);
 
   if (loading && posts.length === 0) {
     return (
