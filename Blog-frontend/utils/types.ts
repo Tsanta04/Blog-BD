@@ -46,7 +46,7 @@ export interface Medias {
   id?: number,
   path_name: string,
   type_id: number,
-  type_: Type_medias
+  type_?: Type_medias
 }
 
 export interface Comments {
@@ -55,7 +55,8 @@ export interface Comments {
   post_id: number,
   user_id: string,
   user?: User,
-  post?: Post
+  post?: Post,
+  createdAt: string,  
 }
 
 export interface Likes_posts {

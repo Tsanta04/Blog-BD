@@ -11,7 +11,7 @@ interface AuthContextType {
   setToken: (token: AuthToken | null) => void;
   updateUser: (username: string, email: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (username: string, email: string, password: string) => Promise<void>;
+  signUp: (username: string, email: string, password: string) => Promise<string>;
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -43,17 +43,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loadStoredAuth = async () => {
     setIsLoading(true);
     try {
-      const storedUser = await AsyncStorage.getItem('user');
       const storedToken = await AsyncStorage.getItem('token');
 
-      if (storedUser) setUser(JSON.parse(storedUser));
-      if (storedToken) setToken(JSON.parse(storedToken));
-
       // Vérifier la validité du token
-      if (storedToken) {
+      if (storedToken) {        
         const authToken: AuthToken = JSON.parse(storedToken);
         const data: User | null = await me(authToken.accessToken);
-        if (data) setUser(data);
+        if (data) {
+          setUser(data);
+          setToken(authToken);
+        }
         else {
           setUser(null);
           setToken(null);
@@ -89,13 +88,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signUp = async (username: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      const { user: newUser, token: authToken } = await register(username, email, password);
+      const { message,user,token } = await register(username, email, password);
 
-      setUser(newUser);
-      setToken(authToken);
+      setUser(user);
+      setToken(token);
 
-      await AsyncStorage.setItem('user', JSON.stringify(newUser));
-      await AsyncStorage.setItem('token', JSON.stringify(authToken));
+      await AsyncStorage.setItem('user', JSON.stringify(user));
+      await AsyncStorage.setItem('token', JSON.stringify(token));
+      return message;
     } catch (error) {
       console.error('Sign up failed:', error);
       throw error;
@@ -107,11 +107,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signOut = async () => {
     setIsLoading(true)
     try {
+      await logOut(token?.accessToken || "");
       setUser(null);
       setToken(null);
       await AsyncStorage.removeItem('user');
       await AsyncStorage.removeItem('token');
-      await logOut();
     } catch (error) {
       console.error('Error signing out:', error);
     } finally{

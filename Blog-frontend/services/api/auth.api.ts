@@ -1,10 +1,11 @@
+import { User } from "@/utils/types";
 import { baseUrl } from ".";
 
 // --- me() : récupère l'utilisateur connecté ---
 export const me = async (accessToken: string) => {
   try {
-    const res = await fetch(`${baseUrl}/me_`, {
-      method: "GET",
+    const res = await fetch(`${baseUrl}/moi`, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${accessToken}`, // 🔑 envoyer le token
@@ -28,7 +29,7 @@ export const logIn = async (email: string, password: string) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-
+    
     if (!response.ok) throw new Error("Invalid credentials");
 
     const data = await response.json();
@@ -51,12 +52,9 @@ export const register = async (name: string, email: string, password: string) =>
     });
 
     if (!response.ok) throw new Error("Invalid credentials");
-
-    const data = await response.json();
-    return {
-      user: data.user,
-      token: data.token as { accessToken: string; refreshToken: string },
-    };
+    
+    const data: { message: string; user: User; token: { accessToken: string; refreshToken: string } } = await response.json();
+    return data;
   } catch (e: any) {
     throw new Error(e?.message || "Erreur de connexion");
   }
@@ -65,12 +63,14 @@ export const register = async (name: string, email: string, password: string) =>
 // --- logOut() ---
 export const logOut = async (accessToken?: string) => {
   try {
-    await fetch(`${baseUrl}/logout`, {
+    const resp = await fetch(`${baseUrl}/logout`, {
       method: "POST",
       headers: accessToken
         ? { "Authorization": `Bearer ${accessToken}` }
         : undefined,
     });
+    if (!resp.ok) throw new Error("Logout failed")
+    
   } catch (e: any) {
     throw new Error(e?.message || "Erreur de connexion");
   }

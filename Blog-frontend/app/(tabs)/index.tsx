@@ -110,16 +110,15 @@ export default function HomeScreen() {
     },    
   });
 
-  const handlePostPress = (post: Post, path: Href) => {
-    if (typeof path === "string") {
-      router.push(`${path}?id=${post.id}` as Href);
-    } else {
-      router.push({
-        ...path,
-        params: { id: post.id|| "" },
-      });
-    }
+  const handlePostPress = (post: Post, path: string) => {
+    console.log(post);
+    router.push(`${path}/${post.id}` as Href);
   };
+
+  useEffect(() => {
+    console.log(posts.length);
+    console.log(posts);    
+  }, [posts]);  
 
   useEffect(() => {
     // We only want to navigate away after the initial auth check is complete.
@@ -186,7 +185,7 @@ export default function HomeScreen() {
         </TouchableOpacity>      
       </View>
       {
-        posts.length === 0 && (
+        posts.length !== 0 && (
         <FlatList
           data={posts}
           keyExtractor={(item) => item.id+""}
@@ -195,8 +194,8 @@ export default function HomeScreen() {
             <PostCard
               post={item}
               user_id={user?.id||""}
-              onPress2={() => handlePostPress(item,'/post/[id]')}
-              onPress1={() => handlePostPress(item,'/profile/[id]')}
+              onPress2={() => handlePostPress(item,'/post')}
+              onPress1={() => handlePostPress(item,'/profile_users')}
               onLike={toggleLike}
             />
           )}

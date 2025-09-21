@@ -22,12 +22,13 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Post } from '@/utils/types';
 import { usePosts } from '@/hooks/usePosts';
+import { renderMedia } from '@/components/RenderMedia';
 
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
   const { token,user } = useAuth();
-  const { comments, loading: commentsLoading, addComment, submitting } = useComments(Number(id) || 0);
+  const { loading: commentsLoading, addComment, submitting } = useComments(Number(id) || 0);
   const {getPost, toggleLike} = usePosts();
   
   const [post, setPost] = useState<Post | null>(null);
@@ -37,6 +38,7 @@ export default function PostDetailScreen() {
   const [isLiked, setIsLiked] = useState(false);
 
   const styles = StyleSheet.create({
+    mediaContainer: { marginBottom: 16 },
     container: {
       flex: 1,
       backgroundColor: colors.background,
@@ -184,6 +186,7 @@ export default function PostDetailScreen() {
       setLoading(true);
       setError(null);
       const fetchedPost: Post = await getPost(Number(id));
+      console.log(fetchedPost.comments);
       setPost(fetchedPost);
       const isLkd = fetchedPost.likes?.some(u => u.id === user?.id);  
       setIsLiked(!!isLkd);
@@ -219,7 +222,7 @@ export default function PostDetailScreen() {
     if (!commentText.trim()) return;
 
     try {
-      await addComment(commentText.trim());
+      // await addComment(commentText.trim());
       setCommentText('');
     } catch (error) {
       Alert.alert('Erreur', 'Impossible d\'ajouter le commentaire');
@@ -322,17 +325,11 @@ export default function PostDetailScreen() {
 
             <Text style={styles.title}>{post.title}</Text>
             <Text style={styles.postText}>{post.content}</Text>
-              <Image
-                    source={{
-                      uri: "https://recoverit.wondershare.com/uploads/best-3d-wallpaper-android-05.jpg",
-                    }}
-                    style={{
-                      width: '100%',
-                      marginBottom: 16,
-                      height: 200, // fixe une hauteur ou adapte dynamiquement
-                    }}
-                    resizeMode="cover"
-                  />
+            {post.medias && post.medias.length > 0 && (
+              <View style={styles.mediaContainer}>
+                {post.medias.map(renderMedia)}
+              </View>
+            )}
             {post.tags && post.tags.length > 0 && (
               <View style={styles.tags}>
                 {post.tags.map((tag, index) => (
@@ -366,7 +363,7 @@ export default function PostDetailScreen() {
 
               <View style={styles.actionButton}>
                 <MessageCircle size={20} color={colors.subtext} />
-                <Text style={styles.actionText}>{comments.length}</Text>
+                <Text style={styles.actionText}>{post.commentsCount}</Text>
               </View>
 
               <View style={styles.actionButton}>
@@ -378,7 +375,7 @@ export default function PostDetailScreen() {
 
           <View style={styles.commentsSection}>
             <Text style={styles.commentsTitle}>
-              Commentaires ({comments.length})
+              {/* Commentaires ({comments.length}) */}
             </Text>
 
             {token && (
@@ -394,7 +391,7 @@ export default function PostDetailScreen() {
                 <Button
                   title="Commenter"
                   onPress={handleAddComment}
-                  loading={submitting}
+                  // loading={submitting}
                   disabled={!commentText.trim()}
                 />
               </View>
@@ -403,7 +400,7 @@ export default function PostDetailScreen() {
             {commentsLoading ? (
               <LoadingSpinner size="small" />
             ) : (
-              comments.map(comment => (
+              post.comments?.map(comment => (
                 <CommentCard key={comment.id} comment={comment} />
               ))
             )}

@@ -89,10 +89,10 @@ export default function SignupScreen() {
     if (!validateForm()) return;
     try {
       const result = await signUp( name.trim(), email.trim(), password );
-      // if (!result.success) {
-      //   Alert.alert('Erreur d’inscription', result.message || 'Une erreur est survenue');
-      //   return;
-      // }
+      if (result !== 'Registered') {
+        Alert.alert('Erreur d’inscription', result || 'Une erreur est survenue');
+        return;
+      }
       router.replace('/(tabs)');
     } catch (error) {
       Alert.alert(
@@ -108,9 +108,7 @@ export default function SignupScreen() {
       style={{ flex: 1 }}
     >
       <ImageBackground
-        source={{
-          uri: 'https://img.freepik.com/photos-premium/fond-degrade-3d-blanc-vert_968517-264.jpg',
-        }}
+        source={{uri: 'https://img.freepik.com/photos-gratuite/illustration-rendu-3d-boules-vertes_181624-58606.jpg?semt=ais_incoming&w=740&q=80'}}
         style={styles.background}
       >
         <View style={styles.overlay}>

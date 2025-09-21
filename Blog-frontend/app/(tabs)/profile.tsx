@@ -152,25 +152,26 @@ export default function ProfileScreen() {
       .slice(0, 2);
   };
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Déconnexion',
-      'Êtes-vous sûr de vouloir vous déconnecter ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Déconnecter',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await signOut();
-            } catch (error) {
-              Alert.alert('Erreur', 'Une erreur est survenue lors de la déconnexion');
-            }
-          },
-        },
-      ]
-    );
+  const handleLogout = async() => {
+    // Alert.alert(
+    //   'Déconnexion',
+    //   'Êtes-vous sûr de vouloir vous déconnecter ?',
+    //   [
+    //     { text: 'Annuler', style: 'cancel' },
+    //     {
+    //       text: 'Déconnecter',
+    //       style: 'destructive',
+    //       onPress: async () => {
+    //         try {
+    //           await signOut();
+    //         } catch (error) {
+    //           Alert.alert('Erreur', 'Une erreur est survenue lors de la déconnexion');
+    //         }
+    //       },
+    //     },
+    //   ]
+    // );
+      await signOut();
   };
   
   if (!isAuthenticated) {
@@ -210,32 +211,6 @@ export default function ProfileScreen() {
         </View>
 
         {/* Menu options */}
-        <Card>
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-            <UserIcon size={24} color={colors.primary} style={styles.menuIcon} />
-            <Text style={styles.menuText}>Modifier le profil</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-            <BookOpen size={24} color={colors.primary} style={styles.menuIcon} />
-            <Text style={styles.menuText}>Mes articles</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-            <Heart size={24} color={colors.primary} style={styles.menuIcon} />
-            <Text style={styles.menuText}>Articles aimés</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-            <MessageCircle size={24} color={colors.primary} style={styles.menuIcon} />
-            <Text style={styles.menuText}>Mes commentaires</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-            <Settings size={24} color={colors.primary} style={styles.menuIcon} />
-            <Text style={styles.menuText}>Paramètres</Text>
-          </TouchableOpacity>
-        </Card>
 
         {/* Bouton logout */}
         <View style={styles.logoutButton}>

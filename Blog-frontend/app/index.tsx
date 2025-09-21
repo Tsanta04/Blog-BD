@@ -7,7 +7,7 @@ export default function App() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!isAuthenticated) {
+      if (isAuthenticated) {
         router.replace("/(tabs)");
       } else {
         router.replace("/login");

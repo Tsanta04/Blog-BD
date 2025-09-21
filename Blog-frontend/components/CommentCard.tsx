@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Comment } from '@/types__';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Comments } from '@/utils/types';
 
 interface CommentCardProps {
-  comment: Comment;
+  comment: Comments;
 }
 
 export function CommentCard({ comment }: CommentCardProps) {
@@ -93,11 +93,11 @@ export function CommentCard({ comment }: CommentCardProps) {
       <View style={styles.header}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
-            {getInitials(comment.author.username)}
+            {getInitials(comment.user?.name || "U")}
           </Text>
         </View>
         <View style={styles.authorInfo}>
-          <Text style={styles.authorName}>{comment.author.username}</Text>
+          <Text style={styles.authorName}>{comment.user?.name}</Text>
           <Text style={styles.date}>{formatDate(comment.createdAt)}</Text>
         </View>
       </View>

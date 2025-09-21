@@ -64,12 +64,16 @@ class AuthController {
             return Response::json(['error'=>'Missing fields'], 400);
         }
 
-        $user = R::findOne('user', 'email = ?', [$b['email']]);
+        $user = R::findOne('users', 'email = ?', [$b['email']]);
         if (!$user || !password_verify($b['password'], $user->password)) {
             return Response::json(['error'=>'Invalid credentials'], 401);
         }
 
         $token = $this->generateToken();
+
+        // --- DÉBOGAGE : AFFICHER LE TOKEN ---
+        // Décommentez les lignes ci-dessous pour voir le token généré
+
         $this->redis->setex('session:token:' . $token, $this->getTTL(), $user->id);
 
         Response::json([
@@ -81,6 +85,7 @@ class AuthController {
     // --- LOGOUT ---
     public function logout() {
         $token = $this->getTokenFromHeader();
+
         if (!$token) return Response::json(['error'=>'Token missing'], 400);
 
         if ($this->redis->exists('session:token:' . $token)) {
@@ -99,7 +104,7 @@ class AuthController {
         $userId = $this->redis->get('session:token:' . $token);
         if (!$userId) return Response::json(['error'=>'Invalid or expired token'], 401);
 
-        $user = R::load('user', $userId);
+        $user = R::load('users', $userId);
         Response::json(['user'=>['id'=>$user->id,'name'=>$user->name,'email'=>$user->email]]);
     }
 

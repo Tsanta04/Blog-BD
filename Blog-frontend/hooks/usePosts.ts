@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { apiService } from '@/services/api/apiService';
 import { useAuth } from '@/contexts/AuthContext';
-import { createPost, getPost, getPostsUser } from '@/services/api/post.api';
+import { createPost, getAllPosts, getPost, getPostsUser, searchPostsRes } from '@/services/api/post.api';
 import { Post, User } from '@/utils/types';
 import { like_post, unlike_post } from '@/services/api/like_post.api';
 
@@ -10,11 +9,38 @@ export function usePosts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { token,user } = useAuth();
+
+  const fetchAllPosts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const fetchedPosts = await getAllPosts(token?.accessToken);      
+      setPosts(fetchedPosts);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch posts');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   const fetchPosts = async () => {
     try {
       setLoading(true);
       setError(null);
       const fetchedPosts = await getPostsUser(user?.id || "", token?.accessToken);
+      setPosts(fetchedPosts);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch posts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const searchPosts = async (query: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const fetchedPosts = await searchPostsRes(query, token?.accessToken);
       setPosts(fetchedPosts);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch posts');
@@ -86,7 +112,7 @@ export function usePosts() {
   };
 
   useEffect(() => {
-    fetchPosts();
+    fetchAllPosts();
   }, [token]);
 
   return {
@@ -94,9 +120,11 @@ export function usePosts() {
     create,
     fetchPost,
     getPost,
+    searchPosts,
     loading,
     error,
-    refetch: fetchPosts,
+    refetch: fetchAllPosts,
+    fetchPosts,
     toggleLike,
   };
 }
