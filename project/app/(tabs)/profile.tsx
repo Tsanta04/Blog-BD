@@ -7,7 +7,9 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'expo-router';
 import { PostCard } from '@/components/PostCard';
 import { api } from '@/services/api';
+import { LineChart } from "react-native-chart-kit";
 
+const screenWidth = Dimensions.get('window').width;
 export default function ProfileScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
@@ -71,11 +73,40 @@ export default function ProfileScreen() {
       {/* Graphique des publications (placeholder) */}
       <View style={styles.chartContainer}>
         <Text style={styles.chartTitle}>Publications des 5 derniers jours</Text>
-        <View style={styles.chartPlaceholder}>
-          <Text style={styles.chartText}>Graphique des statistiques</Text>
-          <Text style={styles.chartSubtext}>
-            Survolez pour voir les détails (likes, commentaires)
-          </Text>
+        <View style={styles.chartContainer}>
+          <LineChart
+            data={{
+              labels: ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"],
+              datasets: [
+                {
+                  data: [30, 45, 28, 80, 99, 43, 50],
+                  color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`, // Likes
+                  strokeWidth: 2,
+                },
+                {
+                  data: [20, 25, 40, 60, 70, 30, 35],
+                  color: (opacity = 1) => `rgba(255, 99, 132, ${opacity})`, // Commentaires
+                  strokeWidth: 2,
+                },
+              ],
+              legend: ["Likes", "Commentaires"],
+            }}
+            width={screenWidth - 165}
+            height={220}
+            chartConfig={{
+              backgroundColor: colors.surface,
+              decimalPlaces: 0,
+              color: (opacity = 1) => colors.text,
+              labelColor: (opacity = 1) => colors.textSecondary,
+              propsForDots: {
+                r: "5",
+                strokeWidth: "2",
+                stroke: colors.primary,
+              },
+            }}
+            bezier
+            style={styles.chart}
+          />
         </View>
       </View>
 
@@ -127,6 +158,9 @@ export default function ProfileScreen() {
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 12,
+    },
+    chart: {
+      borderRadius: 16,
     },
     avatarText: {
       color: colors.background,
