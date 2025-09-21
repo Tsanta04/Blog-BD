@@ -125,9 +125,12 @@ export default function SearchScreen() {
     }
   };
   
-  if (!isAuthenticated) {
-    router.replace('/login');
-  }
+  useEffect(() => {
+    // We only want to navigate away after the initial auth check is complete.
+    if (!isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated]);
 
   return (
     <ImageBackground

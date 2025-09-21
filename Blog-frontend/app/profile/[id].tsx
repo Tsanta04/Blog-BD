@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -157,11 +157,14 @@ export default function ProfileScreen() {
         params: { id: post.id||0 },
         });
     }
-    };
-  
-  if (!isAuthenticated) {
-    router.replace('/login');
-  }
+  };
+
+  useEffect(() => {
+    // We only want to navigate away after the initial auth check is complete.
+    if (!isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated]);
 
   return (
       <ImageBackground
