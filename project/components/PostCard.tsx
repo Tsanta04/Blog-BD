@@ -3,34 +3,20 @@ import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions, Alert } fr
 import { Heart, MessageCircle, Share, User } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'expo-router';
-import { api } from '@/services/api';
+import { api } from '@/servicesBp/api';
+import { Post } from '@/utils/types';
 
 interface PostCardProps {
-  post: {
-    id: number;
-    title: string;
-    content: string;
-    user_name: string;
-    user_id: string;
-    created_at: string;
-    likes_count: number;
-    comments_count: number;
-    is_liked: boolean;
-    tags: string[];
-    medias: Array<{
-      id: number;
-      path_name: string;
-      type: string;
-    }>;
-  };
+  post:Post;
+  user_id:string;
   onUserPress?: (userId: string) => void;
 }
 
-export function PostCard({ post, onUserPress }: PostCardProps) {
+export function PostCard({ post, user_id, onUserPress }: PostCardProps) {
   const { colors } = useTheme();
   const router = useRouter();
-  const [isLiked, setIsLiked] = useState(post.is_liked);
-  const [likesCount, setLikesCount] = useState(post.likes_count);
+  const [isLiked, setIsLiked] = useState(post.likes?.some(u => u.id === user_id));
+  const [likesCount, setLikesCount] = useState(post.likesCount||0);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -47,7 +33,7 @@ export function PostCard({ post, onUserPress }: PostCardProps) {
 
   const handleLike = async () => {
     try {
-      await api.likePost(post.id);
+      await api.likePost(post.id||0);
       setIsLiked(!isLiked);
       setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
     } catch (error) {
@@ -171,12 +157,12 @@ export function PostCard({ post, onUserPress }: PostCardProps) {
       <View style={styles.header}>
         <TouchableOpacity style={styles.avatar} onPress={handleUserPress}>
           <Text style={styles.avatarText}>
-            {post.user_name.charAt(0).toUpperCase()}
+            {post.user?.name.charAt(0).toUpperCase()}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.userInfo} onPress={handleUserPress}>
-          <Text style={styles.userName}>{post.user_name}</Text>
-          <Text style={styles.timeAgo}>{formatDate(post.created_at)}</Text>
+          <Text style={styles.userName}>{post.user?.name}</Text>
+          <Text style={styles.timeAgo}>{formatDate(post.createdAt)}</Text>
         </TouchableOpacity>
       </View>
 
@@ -188,7 +174,7 @@ export function PostCard({ post, onUserPress }: PostCardProps) {
         </Text>
         
         {/* Médias */}
-        {post.medias.length > 0 && (
+        {post.medias && post.medias.length > 0 && (
           <Image
             source={{ uri: post.medias[0].path_name }}
             style={styles.media}
@@ -197,11 +183,11 @@ export function PostCard({ post, onUserPress }: PostCardProps) {
         )}
 
         {/* Tags */}
-        {post.tags.length > 0 && (
+        {post.tags && post.tags.length > 0 && (
           <View style={styles.tagsContainer}>
             {post.tags.map((tag, index) => (
               <View key={index} style={styles.tag}>
-                <Text style={styles.tagText}>#{tag}</Text>
+                <Text style={styles.tagText}>#{tag.tags}</Text>
               </View>
             ))}
           </View>
@@ -221,7 +207,7 @@ export function PostCard({ post, onUserPress }: PostCardProps) {
 
         <TouchableOpacity style={styles.actionButton} onPress={handlePostPress}>
           <MessageCircle color={colors.textSecondary} size={24} />
-          <Text style={styles.actionText}>{post.comments_count}</Text>
+          <Text style={styles.actionText}>{post.commentsCount}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionButton}>

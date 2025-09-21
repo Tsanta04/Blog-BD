@@ -4,58 +4,40 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Heart, MessageCircle, Share, Send } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
-import { api } from '@/services/api';
-
-interface Comment {
-  id: number;
-  content: string;
-  user_name: string;
-  created_at: string;
-}
-
-interface Post {
-  id: number;
-  title: string;
-  content: string;
-  user_name: string;
-  user_id: string;
-  created_at: string;
-  likes_count: number;
-  comments_count: number;
-  is_liked: boolean;
-  tags: string[];
-  medias: Array<{
-    id: number;
-    path_name: string;
-    type: string;
-  }>;
-}
+import { api } from '@/servicesBp/api';
+import { Comments, Post } from '@/utils/types';
+import { usePosts } from '@/hooks/usePosts';
+import { useAuth } from '@/context/AuthContext';
 
 export default function PostDetailScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+
   const { id } = useLocalSearchParams();
+
   const [post, setPost] = useState<Post | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const {getPost, toggleLike} = usePosts();
+  const {user}=useAuth();
+  // const { loading: commentsLoading, addComment, submitting } = useComments(Number(id) || 0);
+
   useEffect(() => {
     if (id) {
       loadPost();
-      loadComments();
     }
   }, [id]);
 
   const loadPost = async () => {
     try {
-      const postData = await api.getPost(id as string);
+      const postData: Post = await getPost(Number(id));
       if (postData) {
         setPost(postData);
-        setIsLiked(postData.is_liked);
-        setLikesCount(postData.likes_count);
+        setIsLiked(postData.likes?.some(u => u.id === user?.id)||false);
+        setLikesCount(postData.likesCount||0);
       }
     } catch (error) {
       console.error('Error loading post:', error);
@@ -64,20 +46,11 @@ export default function PostDetailScreen() {
     }
   };
 
-  const loadComments = async () => {
-    try {
-      const commentsData = await api.getComments(parseInt(id as string));
-      setComments(commentsData);
-    } catch (error) {
-      console.error('Error loading comments:', error);
-    }
-  };
-
   const handleLike = async () => {
     if (!post) return;
     
     try {
-      await api.likePost(post.id);
+      await api.likePost(post.id||0);
       setIsLiked(!isLiked);
       setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
     } catch (error) {
@@ -89,8 +62,7 @@ export default function PostDetailScreen() {
     if (!newComment.trim() || !post) return;
 
     try {
-      const comment = await api.addComment(post.id, newComment.trim());
-      setComments([...comments, comment]);
+      const comment = await api.addComment(post.id||0, newComment.trim());
       setNewComment('');
     } catch (error) {
       console.error('Error adding comment:', error);
@@ -108,17 +80,17 @@ export default function PostDetailScreen() {
     });
   };
 
-  const renderComment = ({ item }: { item: Comment }) => (
+  const renderComment = ({ item }: { item: Comments }) => (
     <View style={styles.commentItem}>
       <View style={styles.commentAvatar}>
         <Text style={styles.commentAvatarText}>
-          {item.user_name.charAt(0).toUpperCase()}
+          {item.user?.name.charAt(0).toUpperCase()}
         </Text>
       </View>
       <View style={styles.commentContent}>
-        <Text style={styles.commentUser}>{item.user_name}</Text>
+        <Text style={styles.commentUser}>{item.user?.name}</Text>
         <Text style={styles.commentText}>{item.content}</Text>
-        <Text style={styles.commentDate}>{formatDate(item.created_at)}</Text>
+        <Text style={styles.commentDate}>{formatDate(item.createdAt)}</Text>
       </View>
     </View>
   );
@@ -355,12 +327,12 @@ export default function PostDetailScreen() {
               onPress={() => router.push(`/user/${post.user_id}`)}
             >
               <Text style={styles.avatarText}>
-                {post.user_name.charAt(0).toUpperCase()}
+                {post.user?.name.charAt(0).toUpperCase()}
               </Text>
             </TouchableOpacity>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>{post.user_name}</Text>
-              <Text style={styles.postDate}>{formatDate(post.created_at)}</Text>
+              <Text style={styles.userName}>{post.user?.name}</Text>
+              <Text style={styles.postDate}>{formatDate(post.createdAt)}</Text>
             </View>
           </View>
 
@@ -368,7 +340,7 @@ export default function PostDetailScreen() {
           <Text style={styles.postContent}>{post.content}</Text>
 
           {/* Médias */}
-          {post.medias.length > 0 && (
+          {post.medias && post.medias.length > 0 && (
             <Image
               source={{ uri: post.medias[0].path_name }}
               style={styles.media}
@@ -377,11 +349,11 @@ export default function PostDetailScreen() {
           )}
 
           {/* Tags */}
-          {post.tags.length > 0 && (
+          {post.tags && post.tags.length > 0 && (
             <View style={styles.tagsContainer}>
               {post.tags.map((tag, index) => (
                 <View key={index} style={styles.tag}>
-                  <Text style={styles.tagText}>#{tag}</Text>
+                  <Text style={styles.tagText}>#{tag.tags}</Text>
                 </View>
               ))}
             </View>
@@ -400,7 +372,7 @@ export default function PostDetailScreen() {
 
             <TouchableOpacity style={styles.actionButton}>
               <MessageCircle color={colors.textSecondary} size={24} />
-              <Text style={styles.actionText}>{comments.length}</Text>
+              <Text style={styles.actionText}>{post.commentsCount}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionButton}>
@@ -413,14 +385,14 @@ export default function PostDetailScreen() {
         <View style={styles.commentsSection}>
           <View style={styles.commentsHeader}>
             <Text style={styles.commentsTitle}>
-              Commentaires ({comments.length})
+              Commentaires ({post.comments?.length})
             </Text>
           </View>
 
           <FlatList
-            data={comments}
+            data={post.comments}
             renderItem={renderComment}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item) => item.id?.toString()||""}
             scrollEnabled={false}
           />
         </View>

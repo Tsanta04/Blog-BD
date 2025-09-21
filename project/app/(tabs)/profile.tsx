@@ -6,7 +6,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'expo-router';
 import { PostCard } from '@/components/PostCard';
-import { api } from '@/services/api';
+import { api } from '@/servicesBp/api';
 import { LineChart } from "react-native-chart-kit";
 
 const screenWidth = Dimensions.get('window').width;

@@ -7,7 +7,7 @@ import { useTheme } from '@/context/ThemeContext';
 
 export default function SignupScreen() {
   const { colors } = useTheme();
-  const { signup } = useAuth();
+  const { signUp } = useAuth();
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -32,7 +32,7 @@ export default function SignupScreen() {
     }
 
     setLoading(true);
-    const success = await signup(name, email, password);
+    const success = await signUp(name, email, password);
     
     if (success) {
       router.replace('/(tabs)');

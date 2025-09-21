@@ -7,7 +7,7 @@ import { useTheme } from '@/context/ThemeContext';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
-  const { login } = useAuth();
+  const { signIn } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,7 +20,7 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
-    const success = await login(email, password);
+    const success = await signIn(email, password);
     
     if (success) {
       router.replace('/(tabs)');

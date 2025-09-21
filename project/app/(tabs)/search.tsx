@@ -5,16 +5,19 @@ import { Search as SearchIcon } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'expo-router';
 import { PostCard } from '@/components/PostCard';
-import { api } from '@/services/api';
+import { api } from '@/servicesBp/api';
+import { useAuth } from '@/context/AuthContext';
+import { Post } from '@/utils/types';
 
 export default function SearchScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'posts' | 'users'>('posts');
-  const [posts, setPosts] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const { user } = useAuth();
 
   const handleSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
@@ -26,7 +29,7 @@ export default function SearchScreen() {
     setLoading(true);
     try {
       if (activeTab === 'posts') {
-        const results = await api.searchPosts(searchQuery);
+        const results: Post = await searchPosts(searchQuery);
         setPosts(results);
       } else {
         const results = await api.searchUsers(searchQuery);
@@ -198,8 +201,8 @@ export default function SearchScreen() {
       {activeTab === 'posts' ? (
         <FlatList
           data={posts}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => <PostCard post={item} />}
+          keyExtractor={(item) => item.id?.toString()||""}
+          renderItem={({ item }) => <PostCard user_id={user?.id||""} post={item} />}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             query ? (

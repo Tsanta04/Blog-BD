@@ -6,7 +6,7 @@ import { TouchableOpacity } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { PostCard } from '@/components/PostCard';
-import { api } from '@/services/api';
+import { api } from '@/servicesBp/api';
 
 export default function UserProfileScreen() {
   const { colors } = useTheme();

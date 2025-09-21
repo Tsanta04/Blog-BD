@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Image, Video, Music, FileText, Plus, X } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'expo-router';
-import { api } from '@/services/api';
+import { api } from '@/servicesBp/api';
 
 export default function AddPostScreen() {
   const { colors } = useTheme();

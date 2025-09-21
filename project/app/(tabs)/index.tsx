@@ -6,56 +6,20 @@ import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'expo-router';
 import { PostCard } from '@/components/PostCard';
-import { api } from '@/services/api';
-
-interface Post {
-  id: number;
-  title: string;
-  content: string;
-  user_name: string;
-  user_id: string;
-  created_at: string;
-  likes_count: number;
-  comments_count: number;
-  is_liked: boolean;
-  tags: string[];
-  medias: Array<{
-    id: number;
-    path_name: string;
-    type: string;
-  }>;
-}
+import { api } from '@/servicesBp/api';
+import { Post } from '@/utils/types';
+import { usePosts } from '@/hooks/usePosts';
 
 export default function HomeScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
-  const [posts, setPosts] = useState<Post[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!user) {
-      router.replace('/auth/login');
-      return;
-    }
-    loadPosts();
-  }, [user]);
-
-  const loadPosts = async () => {
-    try {
-      const postsData = await api.getPosts();
-      setPosts(postsData);
-    } catch (error) {
-      console.error('Error loading posts:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { posts, loading, error, refetch, toggleLike } = usePosts();
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadPosts();
+    await refetch();
     setRefreshing(false);
   };
 
@@ -98,10 +62,11 @@ export default function HomeScreen() {
       <FlatList
         style={styles.list}
         data={posts}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.id?.toString()||""}
         renderItem={({ item }) => (
           <PostCard
             post={item}
+            user_id={user.id||""}
             onUserPress={handleUserPress}
           />
         )}
