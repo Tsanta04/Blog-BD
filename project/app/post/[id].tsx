@@ -8,6 +8,7 @@ import { api } from '@/servicesBp/api';
 import { Comments, Post } from '@/utils/types';
 import { usePosts } from '@/hooks/usePosts';
 import { useAuth } from '@/context/AuthContext';
+import { useComments } from '@/hooks/useComments';
 
 export default function PostDetailScreen() {
   const { colors } = useTheme();
@@ -23,7 +24,7 @@ export default function PostDetailScreen() {
 
   const {getPost, toggleLike} = usePosts();
   const {user}=useAuth();
-  // const { loading: commentsLoading, addComment, submitting } = useComments(Number(id) || 0);
+  const { loading: commentsLoading, addComment, submitting } = useComments(Number(id) || 0);
 
   useEffect(() => {
     if (id) {
@@ -50,7 +51,7 @@ export default function PostDetailScreen() {
     if (!post) return;
     
     try {
-      await api.likePost(post.id||0);
+      await toggleLike(post.id||0);
       setIsLiked(!isLiked);
       setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
     } catch (error) {
@@ -62,7 +63,7 @@ export default function PostDetailScreen() {
     if (!newComment.trim() || !post) return;
 
     try {
-      const comment = await api.addComment(post.id||0, newComment.trim());
+      const comment = await addComment(newComment.trim());
       setNewComment('');
     } catch (error) {
       console.error('Error adding comment:', error);

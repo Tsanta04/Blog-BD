@@ -9,21 +9,21 @@ import { api } from '@/servicesBp/api';
 import { useAuth } from '@/context/AuthContext';
 import { Post } from '@/utils/types';
 import { usePosts } from '@/hooks/usePosts';
+import { useUser } from '@/hooks/useUser';
 
 export default function SearchScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'posts' | 'users'>('posts');
-  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const { user } = useAuth();
   const {posts, searchPosts} = usePosts();
+  const {users, searchUsers} = useUser();
 
   const handleSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
-      setUsers([]);
       return;
     }
 
@@ -32,7 +32,7 @@ export default function SearchScreen() {
       if (activeTab === 'posts') {
         await searchPosts(searchQuery);
       } else {
-        // const results = await api.searchUsers(searchQuery);
+        await searchUsers(searchQuery);
       }
     } catch (error) {
       console.error('Search error:', error);
@@ -217,7 +217,7 @@ export default function SearchScreen() {
       ) : (
         <FlatList
           data={users}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item) => item.id?.toString()||""}
           renderItem={renderUser}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { createPost, getAllPosts, getPost, getPostsUser, searchPostsRes } from '@/services/api/post.api__';
 import { Post, User } from '@/utils/types';
 import { like_post, unlike_post } from '@/services/api/like_post.api';
 import { useAuth } from '@/context/AuthContext';
+import { createPost, getAllPosts, getPost, getPostsUser, searchPostsRes } from '@/services/api/post.api';
 
 export function usePosts() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -23,11 +23,12 @@ export function usePosts() {
     }
   };
   
-  const fetchPosts = async () => {
+  const fetchPosts = async (id_user?:string) => {
+    if(!id_user) id_user = user?.id || "";
     try {
       setLoading(true);
       setError(null);
-      const fetchedPosts = await getPostsUser(user?.id || "", token?.accessToken);
+      const fetchedPosts = await getPostsUser(id_user, token?.accessToken);
       setPosts(fetchedPosts);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch posts');

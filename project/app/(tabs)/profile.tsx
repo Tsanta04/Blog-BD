@@ -10,6 +10,10 @@ import { api } from '@/servicesBp/api';
 import { LineChart } from "react-native-chart-kit";
 import { usePosts } from '@/hooks/usePosts';
 
+const data = {
+  post: [28, 80, 99, 43, 50]
+}
+
 const screenWidth = Dimensions.get('window').width;
 export default function ProfileScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -76,20 +80,21 @@ export default function ProfileScreen() {
         <View style={styles.chartContainer}>
           <LineChart
             data={{
-              labels: ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"],
+              labels: ["Mer", "Jeu", "Ven", "Sam", "Dim"],
               datasets: [
                 {
-                  data: [30, 45, 28, 80, 99, 43, 50],
+                  data: data.post,
                   color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`, // Likes
                   strokeWidth: 2,
                 },
-                {
-                  data: [20, 25, 40, 60, 70, 30, 35],
-                  color: (opacity = 1) => `rgba(255, 99, 132, ${opacity})`, // Commentaires
-                  strokeWidth: 2,
-                },
+                // {
+                //   data: [40, 60, 70, 30, 35],
+                //   color: (opacity = 1) => `rgba(255, 99, 132, ${opacity})`, // Commentaires
+                //   strokeWidth: 2,
+                // },
               ],
-              legend: ["Likes", "Commentaires"],
+              legen: "Posts"
+              // legend: ["Likes", "Commentaires"],
             }}
             width={screenWidth - 165}
             height={220}

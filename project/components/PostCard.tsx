@@ -5,6 +5,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'expo-router';
 import { api } from '@/servicesBp/api';
 import { Post } from '@/utils/types';
+import { usePosts } from '@/hooks/usePosts';
 
 interface PostCardProps {
   post:Post;
@@ -14,6 +15,7 @@ interface PostCardProps {
 
 export function PostCard({ post, user_id, onUserPress }: PostCardProps) {
   const { colors } = useTheme();
+  const { toggleLike } = usePosts();
   const router = useRouter();
   const [isLiked, setIsLiked] = useState(post.likes?.some(u => u.id === user_id));
   const [likesCount, setLikesCount] = useState(post.likesCount||0);
@@ -33,7 +35,7 @@ export function PostCard({ post, user_id, onUserPress }: PostCardProps) {
 
   const handleLike = async () => {
     try {
-      await api.likePost(post.id||0);
+      toggleLike(post.id||0);
       setIsLiked(!isLiked);
       setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
     } catch (error) {

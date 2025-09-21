@@ -7,35 +7,66 @@ import { ArrowLeft } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { PostCard } from '@/components/PostCard';
 import { api } from '@/servicesBp/api';
+import { useAuth } from '@/context/AuthContext';
+import { usePosts } from '@/hooks/usePosts';
+import { useUser } from '@/hooks/useUser';
+import { User } from '@/utils/types';
 
 export default function UserProfileScreen() {
   const { colors } = useTheme();
+  const {user} = useAuth();
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [user] = useState({
-    id: id,
+  const [isLiked, setIsLiked] = useState(false);
+  const [isFollowed, setIsFollowed] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);  
+  const [followerCount, setFollowerCount] = useState(0);  
+  const [user_,setUser_] = useState<User>({
+    id: id[0],
     name: 'Marie Claire',
     email: 'marie@example.com',
   });
-  const [posts, setPosts] = useState([]);
-  const [stats] = useState({
-    followers: 892,
-    likes: 2341,
-    posts: 15,
-  });
+
+  const {posts, fetchPosts} = usePosts();
+  const {users, getUser} = useUser();
 
   useEffect(() => {
-    loadUserPosts();
+    loadData();
   }, []);
 
-  const loadUserPosts = async () => {
+  const loadData = async () => {
     try {
-      const allPosts = await api.getPosts();
-      // Simuler les posts de cet utilisateur
-      const userPosts = allPosts.filter(() => Math.random() > 0.5);
-      setPosts(userPosts);
+      await getUser(id[0]);
+      setUser_(users[0]);
+      await fetchPosts(user_.id);
+      setFollowerCount(users[0].followersCount||0);
+      setLikesCount(users[0].likesCount||0);
     } catch (error) {
       console.error('Error loading user posts:', error);
+    }
+  };
+
+  const handleFollow = async () => {
+    if (!user) return;
+    
+    try {
+      // await toggleLike(post.id||0);
+      setIsFollowed(!isFollowed);
+      setFollowerCount(prev => isFollowed ? prev - 1 : prev + 1);
+    } catch (error) {
+      console.error('Error following post:', error);
+    }
+  };
+
+  const handleLike = async () => {
+    if (!user) return;
+    
+    try {
+      // await toggleLike(post.id||0);
+      setIsLiked(!isLiked);
+      setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
+    } catch (error) {
+      console.error('Error liking post:', error);
     }
   };
 
@@ -45,27 +76,36 @@ export default function UserProfileScreen() {
       <View style={styles.userSection}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
-            {user.name.charAt(0).toUpperCase()}
+            {user_.name.charAt(0).toUpperCase()}
           </Text>
         </View>
-        <Text style={styles.userName}>{user.name}</Text>
-        <Text style={styles.userEmail}>{user.email}</Text>
+        <Text style={styles.userName}>{user_.name}</Text>
+        <Text style={styles.userEmail}>{user_.email}</Text>
       </View>
 
       {/* Stats */}
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{stats.followers}</Text>
+          <Text style={styles.statNumber}>{user_.followersCount}</Text>
           <Text style={styles.statLabel}>Abonnés</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{stats.likes}</Text>
+          <Text style={styles.statNumber}>{user_.likesCount}</Text>
           <Text style={styles.statLabel}>J'aimes</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{stats.posts}</Text>
+          <Text style={styles.statNumber}>{user_.postsCount}</Text>
           <Text style={styles.statLabel}>Posts</Text>
         </View>
+      </View>
+
+      <View style={styles.statsContainer}>
+        <TouchableOpacity onPress={handleFollow}>
+            <Text style={styles.statLabel}>S'Abonner</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleLike}>
+            <Text style={styles.statLabel}>Aimer</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Posts Title */}
@@ -164,13 +204,13 @@ export default function UserProfileScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <ArrowLeft color={colors.text} size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{user.name}</Text>
+        <Text style={styles.headerTitle}>{user_.name}</Text>
       </View>
 
       <FlatList
         data={posts}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <PostCard post={item} />}
+        keyExtractor={(item) => item.id?.toString()||""}
+        renderItem={({ item }) => <PostCard user_id={user?.id||""} post={item} />}
         ListHeaderComponent={renderHeader}
         showsVerticalScrollIndicator={false}
       />

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, FlatList } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, FlatList, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Image, Video, Music, FileText, Plus, X } from 'lucide-react-native';
+import { ArrowLeft, Music, Image as Img, FileText, Plus, X } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'expo-router';
-import { api } from '@/servicesBp/api';
 import { useAuth } from '@/context/AuthContext';
 import { Medias, Post, Tags } from '@/utils/types';
+import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
+import { Video } from "expo-av";
 
 export default function AddPostScreen() {
   const { colors } = useTheme();
@@ -52,21 +54,6 @@ export default function AddPostScreen() {
     }
   };
 
-  const handleAddMedia = (type_: "image" | "video" | "audio" | "document") => {
-    const mockMediaUrl =
-      "https://images.pexels.com/photos/3184298/pexels-photo-3184298.jpeg?auto=compress&cs=tinysrgb&w=500";
-    const media: Medias = {
-      path_name: mockMediaUrl,
-      type_id: 1, // exemple (à relier avec DB)
-      type_: { id: 1, type_ },
-    };
-    setMedias([...medias, media]);
-  };
-
-  const handleRemoveMedia = (index: number) => {
-    setMedias(medias.filter((_, i) => i !== index));
-  };
-
   const handleSubmit = async () => {
     if (!title.trim() || !content.trim()) {
       Alert.alert('Erreur', 'Veuillez remplir le titre et le contenu');
@@ -94,14 +81,77 @@ export default function AddPostScreen() {
     }
   };
 
-  const renderMediaItem = ({ item, index }: { item: string; index: number }) => (
+  const pickMedia = async (type: "image" | "video" | "pdf" | "audio") => {
+    try {
+      if (type === "image" || type === "video") {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes:
+            type === "image"
+              ? ImagePicker.MediaTypeOptions.Images
+              : ImagePicker.MediaTypeOptions.Videos,
+          allowsMultipleSelection: true,
+          quality: 1,
+        });
+
+        if (!result.canceled) {
+          const type_id = type === "image" ? 1 : 2;
+          const uris = result.assets.map((asset: ImagePicker.ImagePickerAsset) => asset.uri);
+          const media: Medias = {
+            path_name: uris[0],
+            type_id,
+            type_: { id: type_id, type_: type },
+          };
+          setMedias((prev) => [...prev, media]);
+        }
+      } else {
+        const result = await DocumentPicker.getDocumentAsync({
+          type: type === "pdf" ? "application/pdf" : "audio/*",
+          multiple: true,
+        });
+
+        if (!result.canceled) {
+          const type_id = type === "pdf" ? 4 : 3;
+          const uris = result.assets?.map((asset: DocumentPicker.DocumentPickerAsset) => asset.uri) ?? [];
+          if (uris.length > 0) {
+            const media: Medias = {
+              path_name: uris[0],
+              type_id,
+              type_: { id: type_id, type_: type },
+            };
+            setMedias((prev) => [...prev, media]);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Erreur sélection média:", e);
+      Alert.alert("Erreur", "Impossible de sélectionner le fichier.");
+    }
+  };
+
+  const handleRemoveMedia = (index: number) => {
+    setMedias((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const renderMediaItem = ({ item, index }: { item: Medias; index: number }) => (
     <View style={styles.mediaItem}>
-      <Text style={styles.mediaText}>Média {index + 1}</Text>
-      <TouchableOpacity
-        style={styles.removeMediaButton}
-        onPress={() => handleRemoveMedia(index)}
-      >
-        <X color={colors.error} size={16} />
+      {
+        item.type_id === 1 ? (
+          <Image source={{ uri: item.path_name }} style={styles.mediaSection} />
+        ) : item.type_id === 2 ? (
+          <Video
+            source={{ uri: item.path_name }}
+            style={styles.mediaSection}
+            useNativeControls
+            // resizeMode="cover"
+          />
+        ) : item.type_id === 3 ? (
+          <Text style={styles.mediaText}>Audio: {item.path_name.split('/').pop()}</Text>
+        ) : item.type_id === 4 ? (  
+          <Text style={styles.mediaText}>Document: {item.path_name.split('/').pop()}</Text>
+        ) : null
+      }
+      <TouchableOpacity onPress={() => handleRemoveMedia(index)} style={styles.removeMediaButton}>
+        <X color={colors.textSecondary} size={16} />
       </TouchableOpacity>
     </View>
   );
@@ -346,22 +396,22 @@ export default function AddPostScreen() {
           <Text style={styles.sectionTitle}>Médias</Text>
           
           <View style={styles.mediaButtons}>
-            <TouchableOpacity style={styles.mediaButton} onPress={handleAddMedia}>
-              <Image color={colors.textSecondary} size={16} />
+            <TouchableOpacity style={styles.mediaButton} onPress={() => pickMedia("image")}>
+              <Img color={colors.textSecondary} size={16} />
               <Text style={styles.mediaButtonText}>Image</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.mediaButton} onPress={handleAddMedia}>
+
+            <TouchableOpacity style={styles.mediaButton} onPress={() => pickMedia("video")}>
               <Video color={colors.textSecondary} size={16} />
               <Text style={styles.mediaButtonText}>Vidéo</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.mediaButton} onPress={handleAddMedia}>
+
+            <TouchableOpacity style={styles.mediaButton} onPress={() => pickMedia("audio")}>
               <Music color={colors.textSecondary} size={16} />
               <Text style={styles.mediaButtonText}>Audio</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.mediaButton} onPress={handleAddMedia}>
+
+            <TouchableOpacity style={styles.mediaButton} onPress={() => pickMedia("pdf")}>
               <FileText color={colors.textSecondary} size={16} />
               <Text style={styles.mediaButtonText}>Document</Text>
             </TouchableOpacity>
