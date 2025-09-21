@@ -19,9 +19,9 @@ export const createPost = async (post: Post, token?: string) => {
     });
 
     if (!response.ok) throw new Error("Failed to create post");
-    // console.log(await response.text());
+    console.log(await response.text());
     
-    return response.json();
+    // return response.json();
   } catch (e: any) {
     console.error("Error creating post:", e);
     throw new Error(e.response?.data?.message || "Erreur de connexion");

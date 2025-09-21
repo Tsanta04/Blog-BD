@@ -8,18 +8,19 @@ import { useRouter } from 'expo-router';
 import { PostCard } from '@/components/PostCard';
 import { api } from '@/servicesBp/api';
 import { LineChart } from "react-native-chart-kit";
+import { usePosts } from '@/hooks/usePosts';
 
 const screenWidth = Dimensions.get('window').width;
 export default function ProfileScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const router = useRouter();
-  const [posts, setPosts] = useState([]);
   const [stats] = useState({
     followers: 1234,
     likes: 5678,
     posts: 42,
   });
+  const {posts, fetchPosts} = usePosts();
 
   useEffect(() => {
     loadUserPosts();
@@ -27,17 +28,16 @@ export default function ProfileScreen() {
 
   const loadUserPosts = async () => {
     try {
-      const userPosts = await api.getPosts();
-      // Filtrer les posts de l'utilisateur courant
-      const myPosts = userPosts.filter(post => post.user_id === user?.id);
-      setPosts(myPosts);
+      if (user) {
+        await fetchPosts();
+      }
     } catch (error) {
       console.error('Error loading user posts:', error);
     }
   };
 
   const handleLogout = async () => {
-    await logout();
+    await signOut();
     router.replace('/auth/login');
   };
 
@@ -263,8 +263,8 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container}>
       <FlatList
         data={posts}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <PostCard post={item} />}
+        keyExtractor={(item) => item.id?.toString()||""}
+        renderItem={({ item }) => <PostCard user_id={user?.id||""} post={item} />}
         ListHeaderComponent={renderHeader}
         showsVerticalScrollIndicator={false}
       />

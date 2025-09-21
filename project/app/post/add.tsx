@@ -5,52 +5,62 @@ import { ArrowLeft, Image, Video, Music, FileText, Plus, X } from 'lucide-react-
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'expo-router';
 import { api } from '@/servicesBp/api';
+import { useAuth } from '@/context/AuthContext';
+import { Medias, Post, Tags } from '@/utils/types';
 
 export default function AddPostScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+
+  const { user } = useAuth();
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<Tags[]>([]);
+  const [availableTags, setAvailableTags] = useState<Tags[]>([]);
   const [newTag, setNewTag] = useState('');
-  const [medias, setMedias] = useState<string[]>([]);
+  const [medias, setMedias] = useState<Medias[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadTags();
   }, []);
-
+  
   const loadTags = async () => {
     try {
-      const tags = await api.getTags();
-      setAvailableTags(tags);
+      // const tags: Tags[] = await getTags();
+      // setAvailableTags(tags);
     } catch (error) {
       console.error('Error loading tags:', error);
     }
   };
 
-  const handleTagToggle = (tag: string) => {
-    if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter(t => t !== tag));
+  const handleTagToggle = (tag: Tags) => {
+    if (selectedTags.find(t => t.tags === tag.tags)) {
+      setSelectedTags(selectedTags.filter(t => t.tags !== tag.tags));
     } else {
       setSelectedTags([...selectedTags, tag]);
     }
   };
 
   const handleAddNewTag = () => {
-    if (newTag.trim() && !availableTags.includes(newTag.trim())) {
-      const tag = newTag.trim().toLowerCase();
+    if (newTag.trim() && !availableTags.find(t => t.tags === newTag.trim())) {
+      const tag: Tags = { tags: newTag.trim().toLowerCase() };
       setAvailableTags([...availableTags, tag]);
       setSelectedTags([...selectedTags, tag]);
       setNewTag('');
     }
   };
 
-  const handleAddMedia = () => {
-    // Simulation d'ajout de média
-    const mockMediaUrl = 'https://images.pexels.com/photos/3184298/pexels-photo-3184298.jpeg?auto=compress&cs=tinysrgb&w=500';
-    setMedias([...medias, mockMediaUrl]);
+  const handleAddMedia = (type_: "image" | "video" | "audio" | "document") => {
+    const mockMediaUrl =
+      "https://images.pexels.com/photos/3184298/pexels-photo-3184298.jpeg?auto=compress&cs=tinysrgb&w=500";
+    const media: Medias = {
+      path_name: mockMediaUrl,
+      type_id: 1, // exemple (à relier avec DB)
+      type_: { id: 1, type_ },
+    };
+    setMedias([...medias, media]);
   };
 
   const handleRemoveMedia = (index: number) => {
@@ -65,11 +75,13 @@ export default function AddPostScreen() {
 
     setLoading(true);
     try {
-      await api.createPost({
+      const newP: Post = ({
         title: title.trim(),
         content: content.trim(),
+        user_id: user?.id || "",
         tags: selectedTags,
         medias: medias,
+        createdAt: new Date().toISOString(),
       });
       
       Alert.alert('Succès', 'Post créé avec succès', [
@@ -293,7 +305,7 @@ export default function AddPostScreen() {
           <View style={styles.tagsContainer}>
             {availableTags.map((tag) => (
               <TouchableOpacity
-                key={tag}
+                key={tag.tags}
                 style={[
                   styles.tag,
                   selectedTags.includes(tag) && styles.selectedTag,
@@ -306,7 +318,7 @@ export default function AddPostScreen() {
                     selectedTags.includes(tag) && styles.selectedTagText,
                   ]}
                 >
-                  #{tag}
+                  #{tag.tags}
                 </Text>
               </TouchableOpacity>
             ))}

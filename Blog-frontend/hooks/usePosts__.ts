@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { createPost, getAllPosts, getPost, getPostsUser, searchPostsRes } from '@/services/api/post.api__';
+import { useAuth } from '@/contexts/AuthContext';
+import { createPost, getAllPosts, getPost, getPostsUser, searchPostsRes } from '@/services/api/post.api';
 import { Post, User } from '@/utils/types';
 import { like_post, unlike_post } from '@/services/api/like_post.api';
-import { useAuth } from '@/context/AuthContext';
 
 export function usePosts() {
   const [posts, setPosts] = useState<Post[]>([]);

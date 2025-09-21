@@ -8,6 +8,7 @@ import { PostCard } from '@/components/PostCard';
 import { api } from '@/servicesBp/api';
 import { useAuth } from '@/context/AuthContext';
 import { Post } from '@/utils/types';
+import { usePosts } from '@/hooks/usePosts';
 
 export default function SearchScreen() {
   const { colors } = useTheme();
@@ -18,10 +19,10 @@ export default function SearchScreen() {
   const [loading, setLoading] = useState(false);
 
   const { user } = useAuth();
+  const {posts, searchPosts} = usePosts();
 
   const handleSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
-      setPosts([]);
       setUsers([]);
       return;
     }
@@ -29,11 +30,9 @@ export default function SearchScreen() {
     setLoading(true);
     try {
       if (activeTab === 'posts') {
-        const results: Post = await searchPosts(searchQuery);
-        setPosts(results);
+        await searchPosts(searchQuery);
       } else {
-        const results = await api.searchUsers(searchQuery);
-        setUsers(results);
+        // const results = await api.searchUsers(searchQuery);
       }
     } catch (error) {
       console.error('Search error:', error);
