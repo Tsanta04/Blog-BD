@@ -55,7 +55,8 @@ export interface Comments {
   post_id: number,
   user_id: string,
   user?: User,
-  post?: Post
+  post?: Post,
+  createdAt: string,
 }
 
 export interface Likes_posts {
@@ -71,4 +72,9 @@ export interface Likes_users {
 export interface Follower_user {
   user_id: string,
   follower_id: string,  
+}
+
+export interface Stat {
+  day:string;
+  num:number;
 }

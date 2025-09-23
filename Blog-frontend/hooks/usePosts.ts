@@ -1,20 +1,60 @@
 import { useState, useEffect } from 'react';
-import { apiService } from '@/services/api/apiService';
-import { useAuth } from '@/contexts/AuthContext';
-import { createPost, getPost, getPostsUser } from '@/services/api/post.api';
-import { Post, User } from '@/utils/types';
-import { like_post, unlike_post } from '@/services/api/like_post.api';
+import { Post, Stat, User } from '@/utils/types';
+import { like_post } from '@/services/api/like_post.api';
+import { useAuth } from '@/context/AuthContext';
+import { createPost, getAllPosts, getPost, getPostsUser, searchPostsRes, getPostStat } from '@/services/api/post.api';
 
 export function usePosts() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { token,user } = useAuth();
-  const fetchPosts = async () => {
+
+  const fetchAllPosts = async () => {
     try {
       setLoading(true);
       setError(null);
-      const fetchedPosts = await getPostsUser(user?.id || "", token?.accessToken);
+      const fetchedPosts = await getAllPosts(token?.accessToken);      
+      setPosts(fetchedPosts);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch posts');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const fetchPosts = async (id_user?:string) => {
+    if(!id_user) id_user = user?.id || "";
+    try {
+      setLoading(true);
+      setError(null);
+      const fetchedPosts = await getPostsUser(id_user, token?.accessToken);
+      setPosts(fetchedPosts);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch posts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPostStat = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const fetchedPosts: Stat[] = await getPostStat(token?.accessToken);
+      return fetchedPosts;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch posts');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const searchPosts = async (query: string) => {
+    try {
+      setLoading(true);
+      setError(null);      
+      const fetchedPosts = await searchPostsRes(query, token?.accessToken);
       setPosts(fetchedPosts);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch posts');
@@ -41,12 +81,14 @@ export function usePosts() {
       setLoading(true);
       const newPost = await createPost(post, token?.accessToken);
       setPosts(prev => [...prev, newPost]);
+      return true;
     } catch (error) {
       console.error('Error creating post:', error);
       throw error;
     } finally {
       setLoading(false);
     }
+    return false;
   };
 
   const toggleLike = async (postId: number) => {
@@ -55,38 +97,17 @@ export function usePosts() {
     if (!post) return;
 
     try {
-      setPosts(prevPosts =>
-        prevPosts.map(p => {
-          if (p.id === postId) {
-            const alreadyLiked = p.likes?.some(u => u.id === user?.id);
-            return {
-              ...p,
-              likes: alreadyLiked
-                ? p.likes?.filter(u => u.id !== user?.id)
-                : [...(p.likes ?? []), { id: user?.id } as User],
-              likesCount: alreadyLiked
-                ? (p.likesCount ?? 0) - 1
-                : (p.likesCount ?? 0) + 1,
-            };
-          }
-          return p;
-        })
-      );
-
-      const alreadyLiked = post.likes?.some(u => u.id === user?.id);
-      if (alreadyLiked) {
-        await unlike_post({ post_id: postId, user_id: user?.id || "" }, token.accessToken);
-      } else {
-        await like_post({ post_id: postId, user_id: user?.id || "" }, token.accessToken);
-      }
+      await like_post({ post_id: postId, user_id: user?.id || "" }, token.accessToken);
+      return true;
 
     } catch (error) {
       console.error('Error toggling like:', error);
     }
+    return false;
   };
 
   useEffect(() => {
-    fetchPosts();
+    fetchAllPosts();
   }, [token]);
 
   return {
@@ -94,9 +115,12 @@ export function usePosts() {
     create,
     fetchPost,
     getPost,
+    searchPosts,
+    fetchPostStat,    
     loading,
     error,
-    refetch: fetchPosts,
+    refetch: fetchAllPosts,
+    fetchPosts,
     toggleLike,
   };
 }

@@ -1,11 +1,17 @@
 {
     "name": "tsanta/mini-blog-backend",
+    "description": "Mini backend pour un blog avec RedBeanPHP, Predis et Dotenv",
+    "type": "project",
     "require": {
-        "gabordemooij/redbean": "5.*",
+        "gabordemooij/redbean": "^5.7",      
         "predis/predis": "^1.1",
-        "vlucas/phpdotenv": "^3.6"
+        "vlucas/phpdotenv": "^5.5"
     },
     "autoload": {
-        "psr-4": { "App\\": "src/" }
-    }
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }

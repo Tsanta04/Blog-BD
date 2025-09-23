@@ -1,14 +1,14 @@
+import { useTheme } from '@/context/ThemeContext';
 import { Tabs } from 'expo-router';
 import { Bell, MessageCircle, User, Moon, Sun, Search } from 'lucide-react-native';
 import { TouchableOpacity, View, Text, StyleSheet, Animated } from 'react-native';
-import { useTheme } from '@/contexts/ThemeContext';
 
 export default function TabsLayout() {
   const { colors, isDark, toggleTheme } = useTheme();
 
   const styles = StyleSheet.create({
     tabBar: {
-      backgroundColor: colors.card,
+      backgroundColor: colors.surface,
       borderTopColor: 'transparent',
       borderRadius: 32,
       marginHorizontal: 10,
@@ -46,7 +46,7 @@ export default function TabsLayout() {
     },
     headerSubtitle: {
       fontSize: 13,
-      color: colors.subtext,
+      color: colors.textSecondary,
       marginTop: 2,
     },
     themeButton: {
@@ -80,8 +80,9 @@ export default function TabsLayout() {
       screenOptions={{
         tabBarShowLabel: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.subtext,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: styles.tabBar,
+        tabBarActiveBackgroundColor: colors.primary + '20',
         headerShown:false
       }}
     >
@@ -96,6 +97,13 @@ export default function TabsLayout() {
         name="search"
         options={{
           tabBarIcon: ({ color, size, focused }) => renderTabIcon(Search, color, size, focused),
+        }}
+      />
+
+      <Tabs.Screen
+        name="message"
+        options={{
+          tabBarIcon: ({ color, size, focused }) => renderTabIcon(MessageCircle, color, size, focused),
         }}
       />
 

@@ -1,40 +1,103 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  Image,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Heart, MessageCircle, Eye } from 'lucide-react-native';
-import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useComments } from '@/hooks/useComments';
-import { CommentCard } from '@/components/CommentCard';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { Post } from '@/utils/types';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, FlatList, Image, Dimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft, Heart, MessageCircle, Share, Send } from 'lucide-react-native';
+import { useTheme } from '@/context/ThemeContext';
+import { api } from '@/servicesBp/api';
+import { Comments, Post } from '@/utils/types';
 import { usePosts } from '@/hooks/usePosts';
+import { useAuth } from '@/context/AuthContext';
+import { useComments } from '@/hooks/useComments';
 
 export default function PostDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
-  const { token,user } = useAuth();
-  const { comments, loading: commentsLoading, addComment, submitting } = useComments(Number(id) || 0);
-  const {getPost, toggleLike} = usePosts();
-  
+  const router = useRouter();
+
+  const { id } = useLocalSearchParams();
+
   const [post, setPost] = useState<Post | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [commentText, setCommentText] = useState('');
+  const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const {getPost, toggleLike, refetch} = usePosts();
+  const {user}=useAuth();
+  const { loading: commentsLoading, addComment, submitting } = useComments(Number(id) || 0);
+
+  useEffect(() => {
+    if (id) {
+      loadPost();
+    }
+  }, [id]);
+
+  const loadPost = async () => {
+    try {
+      const postData: Post = await getPost(Number(id));
+      if (postData) {
+        setPost(postData);
+        setIsLiked(postData.likes?.some(u => u.id === user?.id)||false);
+        setLikesCount(postData.likesCount||0);
+      }
+    } catch (error) {
+      console.error('Error loading post:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLike = async () => {
+    if (!post) return;
+    
+    try {
+      const success = await toggleLike(post.id||0);
+      if(success){
+        setIsLiked(!isLiked);
+        setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
+      }
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !post) return;
+
+    try {
+      const comment = await addComment(newComment.trim());
+      setNewComment('');
+      await loadPost();
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const renderComment = ({ item }: { item: Comments }) => (
+    <View style={styles.commentItem}>
+      <View style={styles.commentAvatar}>
+        <Text style={styles.commentAvatarText}>
+          {item.user?.name.charAt(0).toUpperCase()}
+        </Text>
+      </View>
+      <View style={styles.commentContent}>
+        <Text style={styles.commentUser}>{item.user?.name}</Text>
+        <Text style={styles.commentText}>{item.content}</Text>
+        <Text style={styles.commentDate}>{formatDate(item.createdAt)}</Text>
+      </View>
+    </View>
+  );
 
   const styles = StyleSheet.create({
     container: {
@@ -47,20 +110,17 @@ export default function PostDetailScreen() {
       padding: 16,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
-      backgroundColor: colors.card,
-    },
-    backButton: {
-      marginRight: 16,
     },
     headerTitle: {
       fontSize: 18,
       fontWeight: '600',
       color: colors.text,
+      marginLeft: 16,
     },
     content: {
       flex: 1,
     },
-    postContent: {
+    postContainer: {
       padding: 16,
     },
     postHeader: {
@@ -69,59 +129,65 @@ export default function PostDetailScreen() {
       marginBottom: 16,
     },
     avatar: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width: 50,
+      height: 50,
+      borderRadius: 25,
       backgroundColor: colors.primary,
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: 12,
     },
     avatarText: {
-      color: '#FFFFFF',
-      fontWeight: '600',
+      color: colors.background,
       fontSize: 18,
+      fontWeight: 'bold',
     },
-    authorInfo: {
+    userInfo: {
       flex: 1,
     },
-    authorName: {
+    userName: {
       fontSize: 16,
       fontWeight: '600',
       color: colors.text,
     },
-    date: {
-      fontSize: 14,
-      color: colors.subtext,
+    postDate: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
     },
     title: {
       fontSize: 24,
-      fontWeight: '700',
+      fontWeight: 'bold',
       color: colors.text,
-      marginBottom: 16,
-      lineHeight: 32,
+      marginBottom: 12,
     },
-    postText: {
+    postContent: {
       fontSize: 16,
       color: colors.text,
       lineHeight: 24,
       marginBottom: 16,
     },
-    tags: {
+    media: {
+      width: Dimensions.get('window').width - 32,
+      height: 250,
+      borderRadius: 8,
+      marginBottom: 16,
+    },
+    tagsContainer: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       marginBottom: 16,
     },
     tag: {
-      backgroundColor: colors.primary,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 16,
-      marginRight: 8,
-      marginBottom: 8,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+      marginRight: 6,
+      marginBottom: 6,
     },
     tagText: {
-      color: '#FFFFFF',
+      color: colors.primary,
       fontSize: 12,
       fontWeight: '500',
     },
@@ -130,8 +196,8 @@ export default function PostDetailScreen() {
       alignItems: 'center',
       paddingVertical: 16,
       borderTopWidth: 1,
-      borderBottomWidth: 1,
       borderTopColor: colors.border,
+      borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
     actionButton: {
@@ -140,150 +206,107 @@ export default function PostDetailScreen() {
       marginRight: 24,
     },
     actionText: {
+      color: colors.text,
       marginLeft: 6,
       fontSize: 14,
-      color: colors.subtext,
       fontWeight: '500',
     },
-    likedText: {
-      color: colors.error,
-    },
     commentsSection: {
+      flex: 1,
+    },
+    commentsHeader: {
       padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
     commentsTitle: {
-      fontSize: 18,
+      fontSize: 16,
       fontWeight: '600',
       color: colors.text,
-      marginBottom: 16,
     },
-    commentForm: {
-      marginBottom: 20,
+    commentItem: {
+      flexDirection: 'row',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    commentAvatar: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+    },
+    commentAvatarText: {
+      color: colors.background,
+      fontSize: 12,
+      fontWeight: 'bold',
+    },
+    commentContent: {
+      flex: 1,
+    },
+    commentUser: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    commentText: {
+      fontSize: 14,
+      color: colors.text,
+      lineHeight: 20,
+      marginBottom: 4,
+    },
+    commentDate: {
+      fontSize: 11,
+      color: colors.textSecondary,
     },
     commentInput: {
-      marginBottom: 12,
-    },
-    errorContainer: {
-      flex: 1,
-      justifyContent: 'center',
+      flexDirection: 'row',
       alignItems: 'center',
-      padding: 20,
+      padding: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
     },
-    errorText: {
+    input: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      marginRight: 8,
+      fontSize: 14,
+      color: colors.text,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    sendButton: {
+      padding: 8,
+    },
+    loadingContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    loadingText: {
       fontSize: 16,
-      color: colors.error,
-      textAlign: 'center',
-      marginBottom: 16,
+      color: colors.textSecondary,
     },
   });
 
-  const fetchPost = async () => {
-    if (!id) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      const fetchedPost: Post = await getPost(Number(id));
-      setPost(fetchedPost);
-      const isLkd = fetchedPost.likes?.some(u => u.id === user?.id);  
-      setIsLiked(!!isLkd);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch post');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const tLike = async () => {
-    if (!post || !token) return;
-
-    try {
-      // Optimistically update UI
-      setIsLiked(prev => !prev);
-      await toggleLike(post.id||0);
-    } catch (error) {
-      // Revert optimistic update on error
-      // setPost(prev => {
-      //   if (!prev) return prev;
-      //   return {
-      //     ...prev,
-      //     isLiked: post.isLiked,
-      //     likesCount: post.likesCount,
-      //   };
-      // });
-      console.error('Error toggling like:', error);
-    }
-  };
-
-  const handleAddComment = async () => {
-    if (!commentText.trim()) return;
-
-    try {
-      await addComment(commentText.trim());
-      setCommentText('');
-    } catch (error) {
-      Alert.alert('Erreur', 'Impossible d\'ajouter le commentaire');
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  };
-
-  const getInitials = (username: string) => {
-    return username
-      .split(' ')
-      .map(name => name[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  useEffect(() => {
-    fetchPost();
-  }, [id, token]);
-
-  if (loading) {
+  if (loading || !post) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <ArrowLeft size={24} color={colors.text} />
+          <TouchableOpacity onPress={() => router.back()}>
+            <ArrowLeft color={colors.text} size={24} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Article</Text>
+          <Text style={styles.headerTitle}>Post</Text>
         </View>
-        <LoadingSpinner />
-      </SafeAreaView>
-    );
-  }
-
-  if (error || !post) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <ArrowLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Erreur</Text>
-        </View>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>
-            {error || 'Article non trouvé'}
-          </Text>
-          <Button title="Retour" onPress={() => router.back()} />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Chargement...</Text>
         </View>
       </SafeAreaView>
     );
@@ -291,125 +314,115 @@ export default function PostDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <ArrowLeft size={24} color={colors.text} />
+        <TouchableOpacity onPress={() => router.back()}>
+          <ArrowLeft color={colors.text} size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Article</Text>
+        <Text style={styles.headerTitle}>Post</Text>
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.content}
-      >
-        <ScrollView>
-          <View style={styles.postContent}>
-            <View style={styles.postHeader}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {getInitials(post.user?.name||"")}
-                </Text>
-              </View>
-              <View style={styles.authorInfo}>
-                <Text style={styles.authorName}>{post.user?.name}</Text>
-                <Text style={styles.date}>{formatDate(post.createdAt)}</Text>
-              </View>
-            </View>
-
-            <Text style={styles.title}>{post.title}</Text>
-            <Text style={styles.postText}>{post.content}</Text>
-              <Image
-                    source={{
-                      uri: "https://recoverit.wondershare.com/uploads/best-3d-wallpaper-android-05.jpg",
-                    }}
-                    style={{
-                      width: '100%',
-                      marginBottom: 16,
-                      height: 200, // fixe une hauteur ou adapte dynamiquement
-                    }}
-                    resizeMode="cover"
-                  />
-            {post.tags && post.tags.length > 0 && (
-              <View style={styles.tags}>
-                {post.tags.map((tag, index) => (
-                  <View key={index} style={styles.tag}>
-                    <Text style={styles.tagText}>#{tag.tags}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={tLike}
-                activeOpacity={0.7}
-              >
-                <Heart
-                  size={20}
-                  color={isLiked ? colors.error : colors.subtext}
-                  fill={isLiked ? colors.error : 'transparent'}
-                />
-                <Text
-                  style={[
-                    styles.actionText,
-                    isLiked && styles.likedText,
-                  ]}
-                >
-                  {post.likesCount}
-                </Text>
-              </TouchableOpacity>
-
-              <View style={styles.actionButton}>
-                <MessageCircle size={20} color={colors.subtext} />
-                <Text style={styles.actionText}>{comments.length}</Text>
-              </View>
-
-              <View style={styles.actionButton}>
-                <Eye size={20} color={colors.subtext} />
-                <Text style={styles.actionText}>{post.viewsCount}</Text>
-              </View>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Post Content */}
+        <View style={styles.postContainer}>
+          <View style={styles.postHeader}>
+            <TouchableOpacity 
+              style={styles.avatar}
+              onPress={() => router.push(`/user/${post.user_id}`)}
+            >
+              <Text style={styles.avatarText}>
+                {post.user?.name.charAt(0).toUpperCase()}
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>{post.user?.name}</Text>
+              <Text style={styles.postDate}>{formatDate(post.createdAt)}</Text>
             </View>
           </View>
 
-          <View style={styles.commentsSection}>
+          <Text style={styles.title}>{post.title}</Text>
+          <Text style={styles.postContent}>{post.content}</Text>
+
+          {/* Médias */}
+          {post.medias && post.medias.length > 0 && (
+            <Image
+              source={{ uri: post.medias[0].path_name }}
+              style={styles.media}
+              resizeMode="cover"
+            />
+          )}
+
+          {/* Tags */}
+          {post.tags && post.tags.length > 0 && (
+            <View style={styles.tagsContainer}>
+              {post.tags.map((tag, index) => (
+                <View key={index} style={styles.tag}>
+                  <Text style={styles.tagText}>#{tag.tags}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Actions */}
+          <View style={styles.actions}>
+            <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
+              <Heart
+                color={isLiked ? colors.error : colors.textSecondary}
+                size={24}
+                fill={isLiked ? colors.error : 'none'}
+              />
+              <Text style={styles.actionText}>{likesCount}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionButton}>
+              <MessageCircle color={colors.textSecondary} size={24} />
+              <Text style={styles.actionText}>{post.commentsCount}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionButton}>
+              <Share color={colors.textSecondary} size={24} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Comments Section */}
+        <View style={styles.commentsSection}>
+          <View style={styles.commentsHeader}>
             <Text style={styles.commentsTitle}>
-              Commentaires ({comments.length})
+              Commentaires ({post.comments?.length})
             </Text>
-
-            {token && (
-              <View style={styles.commentForm}>
-                <Input
-                  placeholder="Écrivez votre commentaire..."
-                  value={commentText}
-                  onChangeText={setCommentText}
-                  multiline
-                  numberOfLines={3}
-                  style={styles.commentInput}
-                />
-                <Button
-                  title="Commenter"
-                  onPress={handleAddComment}
-                  loading={submitting}
-                  disabled={!commentText.trim()}
-                />
-              </View>
-            )}
-
-            {commentsLoading ? (
-              <LoadingSpinner size="small" />
-            ) : (
-              comments.map(comment => (
-                <CommentCard key={comment.id} comment={comment} />
-              ))
-            )}
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+
+          <FlatList
+            data={post.comments}
+            renderItem={renderComment}
+            keyExtractor={(item) => item.id?.toString()||""}
+            scrollEnabled={false}
+          />
+        </View>
+      </ScrollView>
+
+      {/* Comment Input */}
+      <View style={styles.commentInput}>
+        <TextInput
+          style={styles.input}
+          placeholder="Ajouter un commentaire..."
+          placeholderTextColor={colors.textSecondary}
+          value={newComment}
+          onChangeText={setNewComment}
+          multiline
+        />
+        <TouchableOpacity
+          style={styles.sendButton}
+          onPress={handleAddComment}
+          disabled={!newComment.trim()}
+        >
+          <Send
+            color={newComment.trim() ? colors.primary : colors.textSecondary}
+            size={20}
+          />
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }

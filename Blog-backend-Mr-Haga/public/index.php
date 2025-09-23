@@ -7,10 +7,12 @@
     use App\Controllers\CommentController;
     use App\Controllers\LikeController;
     use App\Middleware\AuthMiddleware;
+    use App\Controllers\UserController;    
 
     header("Access-Control-Allow-Origin: *");
     header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type, Authorization");
+
 
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
         http_response_code(200);
@@ -30,12 +32,12 @@
         (new AuthController($redis))->register(); exit;
     }
 
-    if ($uri === '/api/me_' && $method === 'POST') {
-        AuthMiddleware::guard($redis, fn($userId) => (new AuthController($rb, $redis))->me()); exit;
+    if ($uri === '/api/moi' && $method === 'POST') {
+        AuthMiddleware::guard($redis, fn($userId) => (new AuthController($redis))->me()); exit;
     }
 
     if ($uri === '/api/logout' && $method === 'POST') {
-        AuthMiddleware::guard($redis, fn($userId) => (new AuthController($rb, $redis))->logout()); exit;
+        AuthMiddleware::guard($redis, fn($userId) => (new AuthController($redis))->logout()); exit;
     }
 
     if (preg_match('#^/api/update_user/(\d+)$#', $uri, $m) && $method === 'PUT') {
@@ -45,57 +47,88 @@
 
     // Posts
     if ($uri === '/api/posts' && $method === 'GET') {
-        (new PostController($rb, $mongo, $redis))->index(); exit;
+        (new PostController($redis))->index(); exit;
     }
 
-    if ($uri === '/api/posts' && $method === 'POST') {
-        AuthMiddleware::guard($redis, fn($userId) => (new PostController($rb, $mongo, $redis))->create($userId)); exit;
-    }
+    if ($uri === '/api/post/stat' && $method === 'GET') {
+        AuthMiddleware::guard($redis, fn($userId) => (new PostController($redis))->getPostStat($userId)); exit;
+    }    
 
-    if (preg_match('#^/api/posts/(\d+)$#', $uri, $m)) {
+    if (preg_match('#^/api/post/(\d+)$#', $uri, $m)) {
         $id = intval($m[1]);
         switch ($method) {
-            case 'GET': (new PostController($rb, $mongo, $redis))->show($id); break;
+            case 'GET': (new PostController($redis))->show($id); break;
             case 'PUT':
-                AuthMiddleware::guard($redis, fn($userId) => (new PostController($rb, $mongo, $redis))->update($userId, $id));
+                AuthMiddleware::guard($redis, fn($userId) => (new PostController($redis))->update($userId, $id));
                 break;
             case 'DELETE':
-                AuthMiddleware::guard($redis, fn($userId) => (new PostController($rb, $mongo, $redis))->delete($userId, $id));
+                AuthMiddleware::guard($redis, fn($userId) => (new PostController($redis))->delete($userId, $id));
                 break;
         }
         exit;
+    }
+
+    if ($uri === '/api/posts/search' && $method === 'GET') {
+        (new PostController($redis))->filter(); exit;
+    }
+
+    if (preg_match('#^/api/posts/([0-9a-fA-F\-]+)$#', $uri, $m)) {
+        $userId = $m[1];
+        switch ($method) {
+            case 'GET': (new PostController($redis))->getByUsers($userId); break;
+            case 'PUT':
+                AuthMiddleware::guard($redis, fn($userId) => (new PostController($redis))->update($userId, $id));
+                break;
+            case 'DELETE':
+                AuthMiddleware::guard($redis, fn($userId) => (new PostController($redis))->delete($userId, $id));
+                break;
+        }
+        exit;
+    }
+
+    if ($uri === '/api/post' && $method === 'POST') {
+        AuthMiddleware::guard($redis, fn() => (new PostController())->create()); exit;
+        // (new PostController($redis))->create(); exit;
     }
 
     // Comments
-    if (preg_match('#^/api/posts/(\d+)/comments$#', $uri, $m)) {
-        $postId = intval($m[1]);
-        if ($method === 'GET') (new CommentController($mongo))->index($postId);
-        if ($method === 'POST') AuthMiddleware::guard($redis, fn($userId) => (new CommentController($rb))->create($userId, $postId));
-        exit;
-    }
-
-    if (preg_match('#^/api/comments/(\w+)$#', $uri, $m)) {
-        $commentId = $m[1];
-        switch ($method) {
-            case 'PUT': AuthMiddleware::guard($redis, fn($userId) => (new CommentController($rb,$mongo))->update($userId, $commentId)); break;
-            case 'DELETE': AuthMiddleware::guard($redis, fn($userId) => (new CommentController($rb,$mongo))->delete($userId, $commentId)); break;
-        }
-        exit;
+    if ($uri === '/api/comment' && $method === 'POST') {
+        (new CommentController())->create(); exit;
     }
 
     // Likes
     if (preg_match('#^/api/like_post/(\d+)$#', $uri, $m)) {
         $postId = intval($m[1]);
-        switch ($method) {
-            case 'POST': AuthMiddleware::guard($redis, fn($userId) => (new LikeController($rb,$redis))->like($userId, $postId)); break;
-            case 'DELETE': AuthMiddleware::guard($redis, fn($userId) => (new LikeController($rb,$redis))->unlike($userId, $postId)); break;
-        }
+
+        AuthMiddleware::guard($redis, function($userId) use ($postId) {
+            $likeController = new LikeController($redis);
+            $likeController->toggle($userId, $postId);
+        });
         exit;
     }
 
-    if (preg_match('#^/api/like_post/(\d+)$#', $uri, $m) && $method === 'GET') {
+    if (preg_match('#^/api/liked_post/(\d+)$#', $uri, $m) && $method === 'GET') {
         $postId = intval($m[1]);
-        (new LikeController($rb, $mongo, $redis))->listUsers($postId); exit;
+        (new LikeController($redis))->listUsers($postId); exit;
+    }
+
+
+    // Users
+    if (preg_match('#^/api/user/([0-9a-fA-F\-]+)$#', $uri, $m) && $method === 'GET') {
+        $userId = $m[1];
+        // error_log($userId);
+        AuthMiddleware::guard($redis, fn() => (new UserController())->getOne($userId));
+        exit();
+    }
+
+    if ($uri === '/api/users/search' && $method === 'GET') {
+        AuthMiddleware::guard($redis, fn() => (new UserController())->search($_GET['q'] ?? ''));
+        exit;
+    }
+
+    if ($uri === '/api/users' && $method === 'GET') {
+        AuthMiddleware::guard($redis, fn() => (new UserController())->getAll());
+        exit;
     }
 
     http_response_code(404);

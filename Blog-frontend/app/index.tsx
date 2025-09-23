@@ -1,21 +1,23 @@
-import { useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import { Redirect } from "expo-router";
+import { useAuth } from "@/context/AuthContext";
 
-export default function App() {
-  const { isAuthenticated } = useAuth();
+export default function Index() {
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (isAuthenticated) {
-        router.replace("/(tabs)");
-      } else {
-        router.replace("/login");
-      }
-    }, 2000); // délai de 2 secondes
+    // petit délai pour laisser le layout se monter
+    const timer = setTimeout(() => setReady(true), 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
-    return () => clearTimeout(timer); // nettoyage du timer
-  }, [isAuthenticated]);
+  if (!ready) {
+    return null; // ou un écran de splash custom
+  }
 
-  return null;
+  if (false) {
+    return <Redirect href="/(tabs)" />;
+  } else {
+    return <Redirect href="/auth/login" />;
+  }
 }

@@ -19,12 +19,35 @@ export const createPost = async (post: Post, token?: string) => {
     });
 
     if (!response.ok) throw new Error("Failed to create post");
+    // console.log(await response.text());
+    
     return response.json();
   } catch (e: any) {
     console.error("Error creating post:", e);
     throw new Error(e.response?.data?.message || "Erreur de connexion");
   }
 };
+
+export const getPostStat = async (token?: string) => {
+  try {
+    const response = await fetch(`${baseUrl}/post/stat`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (!response.ok) throw new Error("Failed to get post");
+    const data = await response.json();
+    console.log(data);
+    
+    return data;
+  } catch (e: any) {
+    console.error("Error getting post:", e);
+    throw new Error(e.response?.data?.message || "Erreur de connexion");
+  }  
+}
 
 export const getPost = async (id: number, token?: string) => {
   try {
@@ -37,10 +60,33 @@ export const getPost = async (id: number, token?: string) => {
     });
 
     if (!response.ok) throw new Error("Failed to get post");
-    return response.json();
+    const data = await response.json();
+    return data.post as Post;
   } catch (e: any) {
     console.error("Error getting post:", e);
     throw new Error(e.response?.data?.message || "Erreur de connexion");
+  }
+};
+
+export const searchPostsRes = async (query: string, token?: string): Promise<Post[]> => {
+  try {
+    const url = new URL(`${baseUrl}/posts/search`);
+    url.searchParams.append('q', query); 
+    
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (!response.ok) throw new Error('Failed to search posts');
+    const data = await response.json();
+    return data.posts as Post[]; // supposons que l'API retourne { posts: [...] }
+  } catch (e: any) {
+    console.error('Error searching posts:', e);
+    throw new Error(e.message || 'Erreur de connexion');
   }
 };
 
@@ -73,7 +119,28 @@ export const getPostsUser = async (id_user: string, token?: string) => {
     });
 
     if (!response.ok) throw new Error("Failed to get posts");
-    return response.json();
+    const data = await response.json();
+    
+    return data.data;
+  } catch (e: any) {
+    console.error("Error getting posts:", e);
+    throw new Error(e.response?.data?.message || "Erreur de connexion");
+  }
+};
+
+export const getAllPosts = async (token?: string) => {
+  try {
+    const response = await fetch(`${baseUrl}/posts`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (!response.ok) throw new Error("Failed to get posts");
+    const data = await response.json();
+    return data.data;
   } catch (e: any) {
     console.error("Error getting posts:", e);
     throw new Error(e.response?.data?.message || "Erreur de connexion");

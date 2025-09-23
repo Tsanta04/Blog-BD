@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Comment } from '@/types__';
-import { useAuth } from '@/contexts/AuthContext';
 import { commentPost, getPostComment } from '@/services/api/comment.api';
 import { Comments } from '@/utils/types';
+import { useAuth } from '@/context/AuthContext';
 
 export function useComments(postId: number) {
   const [comments, setComments] = useState<Comment[]>([]);
@@ -32,7 +31,8 @@ export function useComments(postId: number) {
       const newComment = await commentPost({
         content: content,
         post_id: postId,
-        user_id: user?.id || ""
+        user_id: user?.id || "",
+        createdAt: new Date().toISOString(),
       }, token.accessToken);
       setComments(prevComments => [...prevComments, newComment]);
     } catch (error) {
@@ -57,12 +57,6 @@ export function useComments(postId: number) {
       setSubmitting(false);
     }
   };  
-
-  useEffect(() => {
-    if (postId) {
-      fetchComments();
-    }
-  }, [postId, token]);
 
   return {
     comments,

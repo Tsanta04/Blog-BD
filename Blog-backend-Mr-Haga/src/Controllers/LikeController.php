@@ -2,38 +2,30 @@
 namespace App\Controllers;
 
 use App\Utils\Response;
-use MongoDB\BSON\ObjectId;
 use RedBeanPHP\R;
 
 class LikeController {
-    private $mongo;
     private $redis;
-    private $rb;
 
-    public function __construct($mongo, $redis, $rb){ 
-        $this->mongo = $mongo; 
+    public function __construct($redis = null){ 
         $this->redis = $redis; 
-        $this->rb = $rb;
     }
 
     // toggle like: if liked -> unlike, else like
     public function toggle($userId, $postId){
         // Vérifier que le post existe
-        $post = $this->mongo->posts->findOne(['_id' => new ObjectId($postId)]);
+        $post = R::findOne('posts', 'id = ?', [$postId]);
         if (!$post) return Response::json(['error'=>'Post not found'], 404);
-
         $likesKey = 'post:' . $postId . ':likes';
 
         // Vérifier si le like existe
-        $existing = $this->mongo->likes->findOne([
-            'user_id' => new ObjectId($userId),
-            'post_id' => new ObjectId($postId)
-        ]);
+        $existing = R::findOne('likesposts', 'user_id = ? AND post_id = ?', [$userId, $postId]);
 
         if ($existing) {
-            $this->mongo->likes->deleteOne(['_id' => $existing['_id']]);
-            $this->redis->decr($likesKey);
-            $newCount = intval($this->redis->get($likesKey) ?? 0);
+            R::trash($existing); // Supprimer le like
+            if ($this->redis) $this->redis->decr($likesKey);
+            $newCount = $this->redis ? intval($this->redis->get($likesKey) ?? 0) : null;
+
             return Response::json([
                 'message' => 'unliked',
                 'likesCount' => $newCount
@@ -41,14 +33,16 @@ class LikeController {
         }
 
         // Ajouter un like
-        $like = [
-            'user_id' => new ObjectId($userId),
-            'post_id' => new ObjectId($postId),
-            'created_at' => new \MongoDB\BSON\UTCDateTime()
-        ];
-        $this->mongo->likes->insertOne($like);
-        $this->redis->incr($likesKey);
-        $newCount = intval($this->redis->get($likesKey) ?? 0);
+        $like = R::dispense('likesposts');
+
+        $like->user_id = $userId;
+        $like->post_id = intval($postId);
+        $like->created_at = date('Y-m-d H:i:s');
+
+        R::store($like);
+
+        if ($this->redis) $this->redis->incr($likesKey);
+        $newCount = $this->redis ? intval($this->redis->get($likesKey) ?? 0) : null;
 
         return Response::json([
             'message' => 'liked',
@@ -58,20 +52,17 @@ class LikeController {
 
     // Liste des utilisateurs qui ont liké un post
     public function listUsers($postId){
-        $post = $this->mongo->posts->findOne(['_id' => new ObjectId($postId)]);
+        $post = R::findOne('posts', 'id = ?', [$postId]);
         if (!$post) return Response::json(['error'=>'Post not found'], 404);
 
-        // Récupérer les user_id depuis Mongo
-        $likesCursor = $this->mongo->likes->find(['post_id' => new ObjectId($postId)]);
-        $userIds = [];
-        foreach ($likesCursor as $like) {
-            $userIds[] = intval((string)$like['user_id']); // Conversion en int pour RedBean
-        }
+        // Récupérer les likes
+        $likes = R::findAll('likesposts', 'post_id = ?', [$postId]);
+        if (empty($likes)) return Response::json([]);
 
-        if (empty($userIds)) return Response::json([]);
+        $userIds = array_map(fn($like) => $like->user_id, $likes);
 
-        // Récupérer les infos des users depuis PostgreSQL en une seule requête
-        $usersData = R::findAll('user', ' id IN ('.implode(',', $userIds).') ');
+        // Récupérer les users
+        $usersData = R::findAll('users', 'id IN ('.implode(',', $userIds).')');
 
         $result = [];
         foreach ($usersData as $user) {

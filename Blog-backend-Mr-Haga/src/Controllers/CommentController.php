@@ -2,56 +2,56 @@
 namespace App\Controllers;
 
 use App\Utils\Response;
-use MongoDB\BSON\ObjectId;
+use RedBeanPHP\R;
 
 class CommentController {
-    private $mongo;
 
-    public function __construct($mongo) {
-        $this->mongo = $mongo;
+    public function __construct() {
     }
 
     // Créer un commentaire
-    public function create($userId, $postId){
+    public function create() {
         $b = json_decode(file_get_contents('php://input'), true);
 
-        if (empty($b['content'])) 
-            return Response::json(['error'=>'Missing content'],400);
-
+        if (empty($b['content']) || empty($b['post_id']) || empty($b['user_id'])) {
+            return Response::json(['error' => 'Missing fields'], 400);
+        }
+        
         // Vérifier que le post existe
-        $post = $this->mongo->posts->findOne(['_id' => new ObjectId($postId)]);
-        if (!$post) return Response::json(['error'=>'Post not found'],404);
+        $post = R::load('posts', $b['post_id']);
+        if (!$post->id) {
+            return Response::json(['error' => 'Post not found'], 404);
+        }
 
-        $comment = [
-            'post_id' => new ObjectId($postId),
-            'user_id' => new ObjectId($userId),
-            'content' => $b['content'],
-            'created_at' => new \MongoDB\BSON\UTCDateTime(),
-            'updated_at' => new \MongoDB\BSON\UTCDateTime()
-        ];
+        $comment = R::dispense('comments');
+        $comment->post_id    = $b['post_id'];
+        $comment->user_id    = $b['user_id'];
+        $comment->content    = $b['content'];
+        $comment->created_at = date('c');
+        $comment->updated_at = date('c');
 
-        $insertResult = $this->mongo->comments->insertOne($comment);
+        $id = R::store($comment);
 
-        Response::json(['message'=>'Comment added','id'=>$insertResult->getInsertedId()],201);
+        Response::json(['message' => 'Comment added', 'id' => $id], 201);
     }
 
     // Lire tous les commentaires d'un post
-    public function index($postId){
-        $post = $this->mongo->posts->findOne(['_id' => new ObjectId($postId)]);
-        if (!$post) return Response::json(['error'=>'Post not found'],404);
+    public function index($postId) {
+        $post = R::load('post', $postId);
+        if (!$post->id) {
+            return Response::json(['error' => 'Post not found'], 404);
+        }
 
-        $cursor = $this->mongo->comments->find(
-            ['post_id' => new ObjectId($postId)],
-            ['sort' => ['created_at' => 1]]
-        );
+        $comments = R::findAll('comment', ' post_id = ? ORDER BY created_at ASC ', [$postId]);
 
         $data = [];
-        foreach($cursor as $c){
+        foreach ($comments as $c) {
             $data[] = [
-                'id' => (string)$c['_id'],
-                'content' => $c['content'],
-                'user_id' => (string)$c['user_id'],
-                'created_at' => $c['created_at']->toDateTime()->format('c')
+                'id'         => $c->id,
+                'content'    => $c->content,
+                'user_id'    => $c->user_id,
+                'created_at' => $c->created_at,
+                'updated_at' => $c->updated_at
             ];
         }
 
@@ -59,31 +59,39 @@ class CommentController {
     }
 
     // Modifier un commentaire
-    public function update($userId, $commentId){
+    public function update($userId, $commentId) {
         $b = json_decode(file_get_contents('php://input'), true);
-        if (empty($b['content'])) 
-            return Response::json(['error'=>'Missing content'],400);
+        if (empty($b['content'])) {
+            return Response::json(['error' => 'Missing content'], 400);
+        }
 
-        $comment = $this->mongo->comments->findOne(['_id' => new ObjectId($commentId)]);
-        if (!$comment) return Response::json(['error'=>'Comment not found'],404);
-        if ((string)$comment['user_id'] !== (string)$userId) return Response::json(['error'=>'Forbidden'],403);
+        $comment = R::load('comment', $commentId);
+        if (!$comment->id) {
+            return Response::json(['error' => 'Comment not found'], 404);
+        }
+        if ((string)$comment->user_id !== (string)$userId) {
+            return Response::json(['error' => 'Forbidden'], 403);
+        }
 
-        $this->mongo->comments->updateOne(
-            ['_id' => new ObjectId($commentId)],
-            ['$set' => ['content' => $b['content'], 'updated_at' => new \MongoDB\BSON\UTCDateTime()]]
-        );
+        $comment->content    = $b['content'];
+        $comment->updated_at = date('c');
+        R::store($comment);
 
-        Response::json(['message'=>'Comment updated']);
+        Response::json(['message' => 'Comment updated']);
     }
 
     // Supprimer un commentaire
-    public function delete($userId, $commentId){
-        $comment = $this->mongo->comments->findOne(['_id' => new ObjectId($commentId)]);
-        if (!$comment) return Response::json(['error'=>'Comment not found'],404);
-        if ((string)$comment['user_id'] !== (string)$userId) return Response::json(['error'=>'Forbidden'],403);
+    public function delete($userId, $commentId) {
+        $comment = R::load('comment', $commentId);
+        if (!$comment->id) {
+            return Response::json(['error' => 'Comment not found'], 404);
+        }
+        if ((string)$comment->user_id !== (string)$userId) {
+            return Response::json(['error' => 'Forbidden'], 403);
+        }
 
-        $this->mongo->comments->deleteOne(['_id' => new ObjectId($commentId)]);
-        Response::json(['message'=>'Comment deleted']);
+        R::trash($comment);
+        Response::json(['message' => 'Comment deleted']);
     }
 }
 ?>

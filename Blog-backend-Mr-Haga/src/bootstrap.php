@@ -1,12 +1,15 @@
 <?php
     use Predis\Client as PredisClient;
     use RedBeanPHP\R; 
+    use Dotenv\Dotenv;
     // use MongoDB\Client as MongoClient;
 
-    $dotenv = Dotenv\Dotenv::create(__DIR__ . '/../');
-    $dotenv->load();    
+    $dotenv = Dotenv::createImmutable(__DIR__ . '/../');
+    $dotenv->load();
 
-    var_dump($_ENV['DB_DRIVER'], $_ENV['DB_HOST'], $_ENV['DB_PORT'], $_ENV['DB_NAME'], $_ENV['DB_USER'], $_ENV['DB_PASS']);
+    error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING & ~E_DEPRECATED);
+    ini_set('display_errors', '0'); 
+
     // RedBean (Postgres)
     R::setup(
         sprintf('%s:host=%s;port=%s;dbname=%s', $_ENV['DB_DRIVER'], $_ENV['DB_HOST'], $_ENV['DB_PORT'], $_ENV['DB_NAME']),
