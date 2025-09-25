@@ -1,0 +1,104 @@
+name: CI/CD Pipeline
+
+on:
+    push:
+        branches:
+            - dev
+            - ops/github-actions
+    pull_request:
+        branches:
+            - dev
+
+jobs:
+    build-and-test:
+        runs-on: self-hosted  
+        services:
+            postgres:
+                image: postgres:17.6
+                env:
+                    POSTGRES_USER: runner
+                    POSTGRES_PASSWORD: password
+                    POSTGRES_DB: testdb
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Node.js and Yarn
+              uses: actions/setup-node@v4
+              with:
+                node-version: '20'
+                cache: 'yarn'
+
+            - name: Install dependencies
+              run: yarn install
+
+            - name: Wait for PostgreSQL to be ready
+              run: |
+                while ! nc -z localhost 5432; do   
+                  echo "Waiting for PostgreSQL..."
+                  sleep 1
+                done
+
+            - name: Run Prisma migrations
+              run: yarn prisma migrate deploy
+              env:
+                POSTGRES_PRISMA_URL: 'postgresql://runner:password@localhost:5432/testdb'
+
+           # - name: Run tests
+              # This command runs your test suite, which will now use the prepared database
+             # run: yarn test
+             # env:
+               # DATABASE_URL: 'postgresql://runner:password@localhost:5432/testdb'
+
+    build-image:
+        needs: build-and-test 
+        if: github.event_name == 'push'  # Only build and push the image on a 'push' event, not a pull request
+        runs-on: self-hosted
+        
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+            
+            - name: Log in to Docker Hub
+              uses: docker/login-action@v3
+              with:
+                username: ${{ secrets.DOCKER_USERNAME }}
+                password: ${{ secrets.DOCKER_PASSWORD }}
+
+            - name: Build and push Docker image
+              uses: docker/build-push-action@v5
+              with:
+                context: .
+                file: ./Dockerfile.prod
+                push: true
+                tags: calebandria/food-truck-api:latest
+
+    # This is the new deployment job.
+    deploy:
+      # This job only runs after the `build-image` job has successfully completed.
+      needs: build-image
+      # This job should run on your self-hosted runner.
+      runs-on: self-hosted
+      
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
+        
+        # Log in to Docker Hub again so the runner can pull the latest image.
+        - name: Log in to Docker Hub
+          uses: docker/login-action@v3
+          with:
+            username: ${{ secrets.DOCKER_USERNAME }}
+            password: ${{ secrets.DOCKER_PASSWORD }}
+        
+        # Execute the deployment script.
+        - name: Run deployment script
+          run: chmod 754 ./deploy.sh && ./deploy.sh
