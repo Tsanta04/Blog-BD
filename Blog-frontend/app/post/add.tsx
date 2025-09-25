@@ -48,8 +48,9 @@ export default function AddPostScreen() {
   };
 
   const handleAddNewTag = () => {
-    if (newTag.trim() && !availableTags.find(t => t.tags === newTag.trim())) {
+    if (newTag.trim() && !availableTags.find(t => t.tags === newTag.trim())) {      
       const tag: Tags = { tags: newTag.trim().toLowerCase() };
+      console.log(tag);
       setAvailableTags([...availableTags, tag]);
       setSelectedTags([...selectedTags, tag]);
       setNewTag('');
@@ -72,6 +73,8 @@ export default function AddPostScreen() {
         medias: medias,
         createdAt: new Date().toISOString(),
       });
+      console.log(newP);
+      
       const success = await create(newP);
       if(success){
         Alert.alert('Succès', 'Post créé avec succès', [

@@ -97,13 +97,7 @@ class AuthController {
     }
 
     // --- ME ---
-    public function me() {
-        $token = $this->getTokenFromHeader();
-        if (!$token) return Response::json(['error'=>'Token missing'], 400);
-
-        $userId = $this->redis->get('session:token:' . $token);
-        if (!$userId) return Response::json(['error'=>'Invalid or expired token'], 401);
-
+    public function me($userId) {
         $user = R::load('users', $userId);
         Response::json(['user'=>['id'=>$user->id,'name'=>$user->name,'email'=>$user->email]]);
     }

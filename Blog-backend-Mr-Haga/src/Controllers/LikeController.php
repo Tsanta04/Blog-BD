@@ -12,7 +12,7 @@ class LikeController {
     }
 
     // toggle like: if liked -> unlike, else like
-    public function toggle($userId, $postId){
+    public function toggle_like_post($userId, $postId){
         // Vérifier que le post existe
         $post = R::findOne('posts', 'id = ?', [$postId]);
         if (!$post) return Response::json(['error'=>'Post not found'], 404);
@@ -37,6 +37,84 @@ class LikeController {
 
         $like->user_id = $userId;
         $like->post_id = intval($postId);
+        $like->created_at = date('Y-m-d H:i:s');
+
+        R::store($like);
+
+        if ($this->redis) $this->redis->incr($likesKey);
+        $newCount = $this->redis ? intval($this->redis->get($likesKey) ?? 0) : null;
+
+        return Response::json([
+            'message' => 'liked',
+            'likesCount' => $newCount
+        ]);
+    }
+
+    // toggle like: if liked -> unlike, else like
+    public function toggle_like_user($userId, $toLikeId){
+        // Vérifier que le user existe
+        $user = R::findOne('users', 'id = ?', [$toLikeId]);
+        if (!$user) return Response::json(['error'=>'User not found'], 404);
+        $likesKey = 'user:' . $toLikeId . ':likes';
+
+        // Vérifier si le like existe
+        $existing = R::findOne('likesusers', 'user_id = ? AND liker_id = ?', [$toLikeId,$userId]);
+
+        if ($existing) {
+            R::trash($existing); // Supprimer le like
+            if ($this->redis) $this->redis->decr($likesKey);
+            $newCount = $this->redis ? intval($this->redis->get($likesKey) ?? 0) : null;
+
+            return Response::json([
+                'message' => 'unliked',
+                'likesCount' => $newCount
+            ]);
+        }
+
+        // Ajouter un like
+        $like = R::dispense('likesusers');
+
+        $like->user_id = $toLikeId;
+        $like->liker_id = $userId;
+        $like->created_at = date('Y-m-d H:i:s');
+
+        R::store($like);
+
+        if ($this->redis) $this->redis->incr($likesKey);
+        $newCount = $this->redis ? intval($this->redis->get($likesKey) ?? 0) : null;
+
+        return Response::json([
+            'message' => 'liked',
+            'likesCount' => $newCount
+        ]);
+    }
+
+    // toggle like: if liked -> unlike, else like
+    public function toggle_follow($userId, $toFollowId){
+        // Vérifier que le user existe
+        $user = R::findOne('users', 'id = ?', [$toFollowId]);
+        if (!$user) return Response::json(['error'=>'User not found'], 404);
+        $likesKey = 'user:' . $toLikeId . ':likes';
+
+        // Vérifier si le like existe
+        $existing = R::findOne('followers', 'user_id = ? AND follower_id = ?', [$toFollowId,$userId]);
+
+        if ($existing) {
+            R::trash($existing); // Supprimer le like
+            if ($this->redis) $this->redis->decr($likesKey);
+            $newCount = $this->redis ? intval($this->redis->get($likesKey) ?? 0) : null;
+
+            return Response::json([
+                'message' => 'unliked',
+                'likesCount' => $newCount
+            ]);
+        }
+
+        // Ajouter un like
+        $like = R::dispense('followers');
+
+        $like->user_id = $toFollowId;
+        $like->follower_id = $userId;
         $like->created_at = date('Y-m-d H:i:s');
 
         R::store($like);

@@ -3,16 +3,12 @@ import { baseUrl } from ".";
 
 export const like_user = async (like:Likes_users ,accessToken: string) => {
     try {
-      const response = await fetch(`${baseUrl}/like_user`, {
+      const response = await fetch(`${baseUrl}/like_user/${like.user_id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           "Authorization": `Bearer ${accessToken}`, // 🔑 envoyer le token
-        },
-        body: JSON.stringify({
-          user_id: like.user_id,
-          liker_id: like.liker_id
-        }),
+        }
       });
       console.log(response);
       

@@ -32,8 +32,8 @@
         (new AuthController($redis))->register(); exit;
     }
 
-    if ($uri === '/api/moi' && $method === 'POST') {
-        AuthMiddleware::guard($redis, fn($userId) => (new AuthController($redis))->me()); exit;
+    if ($uri === '/api/moi' && $method === 'GET') {
+        AuthMiddleware::guard($redis, fn($userId) => (new AuthController($redis))->me($userId)); exit;
     }
 
     if ($uri === '/api/logout' && $method === 'POST') {
@@ -102,7 +102,7 @@
 
         AuthMiddleware::guard($redis, function($userId) use ($postId) {
             $likeController = new LikeController($redis);
-            $likeController->toggle($userId, $postId);
+            $likeController->toggle_like_post($userId, $postId);
         });
         exit;
     }
@@ -116,8 +116,7 @@
     // Users
     if (preg_match('#^/api/user/([0-9a-fA-F\-]+)$#', $uri, $m) && $method === 'GET') {
         $userId = $m[1];
-        // error_log($userId);
-        AuthMiddleware::guard($redis, fn() => (new UserController())->getOne($userId));
+        AuthMiddleware::guard($redis, fn($likerId) => (new UserController())->getOne($userId, $likerId));
         exit();
     }
 
@@ -130,6 +129,17 @@
         AuthMiddleware::guard($redis, fn() => (new UserController())->getAll());
         exit;
     }
+
+    // Users
+    if (preg_match('#^/api/like_user/([0-9a-fA-F\-]+)$#', $uri, $m) && $method === 'POST') {
+        $toLikeId = $m[1];
+        AuthMiddleware::guard($redis, fn($userId) => (new LikeController())->toggle_like_user($userId,$toLikeId)); exit;
+    }    
+
+    if (preg_match('#^/api/follow/([0-9a-fA-F\-]+)$#', $uri, $m) && $method === 'POST') {
+        $toFollowId = $m[1];
+        AuthMiddleware::guard($redis, fn($userId) => (new LikeController())->toggle_follow($userId,$toFollowId)); exit;
+    }    
 
     http_response_code(404);
     echo json_encode(["error" => "Not found"]);

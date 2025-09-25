@@ -4,20 +4,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search as SearchIcon } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'expo-router';
-import { PostCard } from '@/components/PostCard';
-import { useAuth } from '@/context/AuthContext';
-import { usePosts } from '@/hooks/usePosts';
 import { useUser } from '@/hooks/useUser';
 
 export default function SearchScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'posts' | 'users'>('posts');
   const [loading, setLoading] = useState(false);
 
-  const { user } = useAuth();
-  const {posts, searchPosts} = usePosts();
+  // const { user } = useAuth();
   const {users, searchUsers} = useUser();
 
   const handleSearch = async (searchQuery: string) => {
@@ -29,11 +24,7 @@ export default function SearchScreen() {
 
     setLoading(true);
     try {
-      if (activeTab === 'posts') {        
-        await searchPosts(searchQuery);        
-      } else {
         await searchUsers(searchQuery);
-      }
     } catch (error) {
       console.error('Search error:', error);
     } finally {
@@ -41,18 +32,10 @@ export default function SearchScreen() {
     }
   };
 
-  const handleTabChange = (tab: 'posts' | 'users') => {
-    setActiveTab(tab);
-    if (query) {
-      handleSearch(query);
-      console.log(users);
-    }
-  };
-
   const renderUser = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.userItem}
-      onPress={() => router.push(`/user/${item.id}`)}
+      onPress={() => router.push(`/discussion/${item.id}`)}
     >
       <View style={styles.userAvatar}>
         <Text style={styles.userAvatarText}>
@@ -177,45 +160,7 @@ export default function SearchScreen() {
         />
       </View>
 
-      {/* Onglets */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'posts' && styles.activeTab]}
-          onPress={() => handleTabChange('posts')}
-        >
-          <Text style={[styles.tabText, activeTab === 'posts' && styles.activeTabText]}>
-            Posts
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'users' && styles.activeTab]}
-          onPress={() => handleTabChange('users')}
-        >
-          <Text style={[styles.tabText, activeTab === 'users' && styles.activeTabText]}>
-            Utilisateurs
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       {/* Résultats */}
-      {activeTab === 'posts' ? (
-        <FlatList
-          data={posts}
-          keyExtractor={(item) => item.id?.toString()||""}
-          renderItem={({ item }) => <PostCard user_id={user?.id||""} post={item} />}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            query ? (
-              <View style={styles.emptyState}>
-                <SearchIcon color={colors.textSecondary} size={64} />
-                <Text style={styles.emptyText}>
-                  {loading ? 'Recherche en cours...' : 'Aucun post trouvé'}
-                </Text>
-              </View>
-            ) : null
-          }
-        />
-      ) : (
         <FlatList
           data={users}
           keyExtractor={(item) => item.id?.toString()||""}
@@ -232,7 +177,6 @@ export default function SearchScreen() {
             ) : null
           }
         />
-      )}
     </SafeAreaView>
   );
 }

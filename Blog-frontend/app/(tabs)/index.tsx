@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
+import { FlatList, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'expo-router';
 import { PostCard } from '@/components/PostCard';
-import { api } from '@/servicesBp/api';
-import { Post } from '@/utils/types';
 import { usePosts } from '@/hooks/usePosts';
 
 export default function HomeScreen() {

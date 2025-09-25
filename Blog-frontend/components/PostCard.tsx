@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions, Alert } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions, Alert, FlatList } from 'react-native';
 import { Heart, MessageCircle, Share, User } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'expo-router';
 import { api } from '@/servicesBp/api';
-import { Post } from '@/utils/types';
+import { Medias, Post } from '@/utils/types';
 import { usePosts } from '@/hooks/usePosts';
+import { Video } from 'expo-av';
 
 interface PostCardProps {
   post:Post;
@@ -56,6 +57,30 @@ export function PostCard({ post, user_id, onUserPress }: PostCardProps) {
   const handlePostPress = () => {
     router.push(`/post/${post.id}`);
   };
+
+  
+  const renderMediaItem = ({ item, index }: { item: Medias; index: number }) => (
+    <View>
+      {
+        item.type_id == 1 ? (
+          // <Text style={styles.mediaText}>TTTT</Text>
+          <Image source={{ uri: item.path_name }} style={styles.media}/>
+        ) : item.type_id == 2 ? (
+          <Video
+            source={{ uri: item.path_name }}
+            useNativeControls
+            style={styles.media}
+            // shouldPlay            
+          />
+        ) : item.type_id == 3 ? (
+          <Text style={styles.medialabel}>Audio: {item.path_name.split('/').pop()}</Text>
+        ) : item.type_id == 4 ? (  
+          <Text style={styles.medialabel}>Document: {item.path_name.split('/').pop()}</Text>
+        ) : null
+      }
+    </View>
+  );
+
 
   const styles = StyleSheet.create({
     container: {
@@ -116,6 +141,18 @@ export function PostCard({ post, user_id, onUserPress }: PostCardProps) {
       width: Dimensions.get('window').width - 30,
       height: 300,
       marginBottom: 12,
+    },
+    medialabel:{
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.surface,
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color:colors.primary
     },
     tagsContainer: {
       flexDirection: 'row',
@@ -178,11 +215,11 @@ export function PostCard({ post, user_id, onUserPress }: PostCardProps) {
         
         {/* Médias */}
         {post.medias && post.medias.length > 0 && (
-          <Image
-            source={{ uri: post.medias[0].path_name }}
-            style={styles.media}
-            resizeMode="cover"
-          />
+            <FlatList
+              data={post.medias}
+              renderItem={renderMediaItem}
+              keyExtractor={(item, index) => index.toString()}
+            />
         )}
 
         {/* Tags */}

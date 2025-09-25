@@ -12,21 +12,29 @@ class UserController {
     }    
     
     // Récupérer un utilisateur par son id
-    public function getOne($id){
+    public function getOne($id,$likerId){
         // Récupérer l'utilisateur
         $user = R::findOne('users', 'id = ?', [$id]);
         if (!$user) return Response::json(['error' => 'User not found'], 404);
 
         // Followers
-        $followers = R::findAll('followers', 'id_user = ?', [$id]);
+        $followers = R::findAll('followers', 'user_id = ?', [$id]);
         $followersCount = count($followers);
 
         // Likes
-        $likes = R::findAll('userslikes', 'id_user = ?', [$id]);
+        $likes = R::findAll('likesusers', 'user_id = ?', [$id]);
         $likesCount = count($likes);
 
+        $isLiked = false;
+        $isFollowed = false;
+        
+        if($likerId){
+            $isLiked = R::findOne('likesusers', 'user_id = ? AND liker_id = ?', [$id, $likerId]);
+            $isFollowed = R::findOne('followers', 'user_id = ? AND follower_id = ?', [$id, $likerId]);
+        }
+
         // Posts
-        $posts = R::findAll('posts', 'id_user = ?', [$id]);
+        $posts = R::findAll('posts', 'user_id = ?', [$id]);
         $postsData = [];
         foreach($posts as $post){
             $postsData[] = [
@@ -45,6 +53,8 @@ class UserController {
             'posts' => $postsData,
             'postsCount' => $postsCount,
             'followersCount' => $followersCount,
+            'isLiked' => $isLiked,
+            'isFollowed' => $isFollowed,
             'likesCount' => $likesCount
         ]);
     }
@@ -53,8 +63,13 @@ class UserController {
     // Rechercher des utilisateurs par query (ex: nom ou email)
     public function search($query){
         $query = "%$query%";
-        $users = R::findAll('users', 'name LIKE ? OR email LIKE ? ORDER BY name ASC', [$query, $query]);
-
+        error_log($query);
+        if ($query === '') {
+            // si pas de query, on renvoie les derniers posts
+            $users = R::findAll('users', ' ORDER BY created_at DESC LIMIT ? ', [$limit]);
+        } else {
+            $users = R::findAll('users', 'name LIKE ? OR email LIKE ? ORDER BY name ASC', [$query, $query]);
+        }
 
         $result = [];
         foreach ($users as $user) {

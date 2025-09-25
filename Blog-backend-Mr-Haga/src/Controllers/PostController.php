@@ -48,7 +48,8 @@ class PostController {
                 $type = R::load('types_medias', $m->type_id);
                 $medias[] = [
                     'path_name' => $m->path_name,
-                    'type' => $type->type_,
+                    'type_' => $type->type_,
+                    'type_id' => intval($type->id)
                 ];
             }
 
@@ -109,14 +110,14 @@ class PostController {
             if ($tag->id) $tags[] = ['id'=>$tag->id,'tags'=>$tag->tags];
         }
 
-        // médias
         $mediasR = R::findAll('medias', ' post_id = ? ', [$postId]);
         $medias = [];
         foreach($mediasR as $m){
             $type = R::load('types_medias', $m->type_id);
             $medias[] = [
                 'path_name' => $m->path_name,
-                'type' => $type->type_,
+                'type_' => $type->type_,
+                'type_id' => intval($type->id)
             ];
         }
 
@@ -154,12 +155,17 @@ class PostController {
 
     public function getPostStat($userId) {
         $stats = R::getAll("
-            SELECT DATE(created_at) AS day, COUNT(id) AS posts_count
-            FROM posts
-            WHERE user_id = ?
-            AND created_at >= NOW() - INTERVAL '5 days'
-            GROUP BY day
-            ORDER BY day DESC
+            SELECT TO_CHAR(d::date, 'Dy') AS day, COALESCE(COUNT(p.id), 0) AS num
+            FROM generate_series(
+                (CURRENT_DATE - INTERVAL '4 days')::date,
+                CURRENT_DATE,
+                '1 day'
+            ) d
+            LEFT JOIN posts p 
+            ON DATE(p.created_at) = d::date
+            AND p.user_id = ?
+            GROUP BY d
+            ORDER BY d ASC
         ", [$userId]);
 
         Response::json($stats);
@@ -205,7 +211,8 @@ class PostController {
                 $type = R::load('types_medias', $m->type_id);
                 $medias[] = [
                     'path_name' => $m->path_name,
-                    'type' => $type->type_,
+                    'type_' => $type->type_,
+                    'type_id' => intval($type->id)
                 ];
             }
 
@@ -285,8 +292,9 @@ class PostController {
             foreach($mediasR as $m){
                 $type = R::load('types_medias', $m->type_id);
                 $medias[] = [
-                    'url' => $m->path_name,
-                    'type' => $type->type_,
+                    'path_name' => $m->path_name,
+                    'type_' => $type->type_,
+                    'type_id' => intval($type->id)
                 ];
             }
 
@@ -331,7 +339,6 @@ class PostController {
         }
 
         $post = R::dispense('posts');
-        $post->id = 123456;
         $post->title = trim($data['title']);
         $post->content = trim($data['content']);
         $post->user_id = $data['user_id']; // UUID
@@ -341,9 +348,9 @@ class PostController {
         $postId = R::store($post);
 
         // TAGS
-        if (!empty($data['tags']) && is_array($data['tags'])) {
-            error_log($postId);
-            foreach ($data['tags'] as $tagData) {
+        if (!empty($data['tags'])) {
+             $input_tags = json_decode($data['tags'], true);            
+            foreach ($input_tags as $tagData) {
                 $tagName = $tagData['tags'] ?? null;
                 if (!$tagName) continue;
 
@@ -354,7 +361,7 @@ class PostController {
                     $tag->id = R::store($tag);
                 }
 
-                $pivot = R::dispense('posts_tags');
+                $pivot = R::dispense('posttags');
                 $pivot->post_id = $postId;
                 $pivot->tag_id = $tag->id;
                 R::store($pivot);
@@ -362,8 +369,9 @@ class PostController {
         }
 
         // MEDIAS
-        if (!empty($data['medias']) && is_array($data['medias'])) {
-            foreach ($data['medias'] as $m) {
+        if (!empty($data['medias'])) {
+            $input_medias = json_decode($data['medias'], true);            
+            foreach ($input_medias as $m) {
                 $media = R::dispense('medias');
                 $media->post_id = $postId;
                 $media->path_name = $m['path_name'] ?? '';
@@ -376,6 +384,5 @@ class PostController {
         Response::json(['post' => $post, 'message' => 'Post créé avec succès']);
     }
 
-    // create, update, delete restent identiques
 }
 ?>

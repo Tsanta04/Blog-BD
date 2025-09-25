@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, FlatList, Image, Dimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, FlatList, Image, Dimensions, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Heart, MessageCircle, Share, Send } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
-import { api } from '@/servicesBp/api';
-import { Comments, Post } from '@/utils/types';
+import { Play, Pause } from "lucide-react-native";
+import { Comments, Medias, Post } from '@/utils/types';
 import { usePosts } from '@/hooks/usePosts';
 import { useAuth } from '@/context/AuthContext';
 import { useComments } from '@/hooks/useComments';
+import { Audio, Video } from 'expo-av';
 
 export default function PostDetailScreen() {
   const { colors } = useTheme();
@@ -21,6 +22,9 @@ export default function PostDetailScreen() {
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
 
   const {getPost, toggleLike, refetch} = usePosts();
   const {user}=useAuth();
@@ -73,6 +77,28 @@ export default function PostDetailScreen() {
     }
   };
 
+  const handlePlayPause = async (uri:string) => {
+    if (!sound) {
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri },
+        { shouldPlay: true }
+      );
+      setSound(newSound);
+      setIsPlaying(true);
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) setIsPlaying(false);
+      });
+    } else {
+      if (isPlaying) {
+        await sound.pauseAsync();
+        setIsPlaying(false);
+      } else {
+        await sound.playAsync();
+        setIsPlaying(true);
+      }
+    }
+  };  
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', {
@@ -99,6 +125,39 @@ export default function PostDetailScreen() {
     </View>
   );
 
+  const renderMediaItem = ({ item, index }: { item: Medias; index: number }) => (
+    <View>
+      {
+        item.type_id == 1 ? (
+          // <Text style={styles.mediaText}>TTTT</Text>
+          <Image source={{ uri: item.path_name }} style={styles.media}/>
+        ) : item.type_id == 2 ? (
+          <Video
+            source={{ uri: item.path_name }}
+            useNativeControls
+            style={styles.media}
+            // resizeMode="cover"
+          />
+        ) : item.type_id == 3 ? (
+          <TouchableOpacity onPress={() => handlePlayPause(item.path_name)}>
+            <Text style={styles.medialabel}>Audio:
+              {isPlaying ? <Pause size={14} color={colors.primary} /> : <Play size={14} color={colors.primary} />}            
+              {item.path_name.split('/').pop()}              
+            </Text>
+          </TouchableOpacity>
+        ) : item.type_id == 4 ? (  
+          <TouchableOpacity onPress={() => router.push(`/pdf/${item.path_name}`)}>
+            <Text style={styles.medialabel}>
+              Document: {item.path_name.split("/").pop()}
+            </Text>
+          </TouchableOpacity>
+
+        ) : null
+      }
+    </View>
+  );
+
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -123,6 +182,18 @@ export default function PostDetailScreen() {
     postContainer: {
       padding: 16,
     },
+     medialabel:{
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.surface,
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color:colors.primary
+    },   
     postHeader: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -345,11 +416,11 @@ export default function PostDetailScreen() {
 
           {/* Médias */}
           {post.medias && post.medias.length > 0 && (
-            <Image
-              source={{ uri: post.medias[0].path_name }}
-              style={styles.media}
-              resizeMode="cover"
-            />
+              <FlatList
+                data={post.medias}
+                renderItem={renderMediaItem}
+                keyExtractor={(item, index) => index.toString()}
+              />
           )}
 
           {/* Tags */}

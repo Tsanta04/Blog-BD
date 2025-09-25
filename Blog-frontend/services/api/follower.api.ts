@@ -9,9 +9,6 @@ export const follow = async (follow:Follower_user,  accessToken: string) => {
           'Content-Type': 'application/json',
           "Authorization": `Bearer ${accessToken}`, // 🔑 envoyer le token
         },
-        body: JSON.stringify({
-          follower_id: follow.follower_id
-        }),
       });
       console.log(response);
       

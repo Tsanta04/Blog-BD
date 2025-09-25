@@ -25,7 +25,7 @@ export default function UserProfileScreen() {
   const [user_,setUser_] = useState<User>({"email": "alice@example.com", "followersCount": 0, "id": "a1111111-1111-4f11-8111-111111111111", "likesCount": 0, "name": "Alice", "posts": [], "postsCount": 0});
 
   const {posts, fetchPosts} = usePosts();
-  const {getUser, toggleFollow, toggleLike} = useUser();
+  const {getUser} = useUser();
 
   useEffect(() => {
     loadData();
@@ -36,20 +36,24 @@ export default function UserProfileScreen() {
       const use: User = await getUser(id.toString());
       setUser_(use);
       await fetchPosts(use.id);
-      setIsFollowed(use.isFollowed || false);
-      setIsLiked(use.isLiked || false);
+      setIsFollowed(use.followers?.some(u => u.id === user?.id)||false);
+      setIsLiked(use.likes?.some(u => u.id === user?.id)||false);
       setFollowerCount(use.followersCount||0);
       setLikesCount(use.likesCount||0);
     } catch (error) {
       console.error('Error loading user posts:', error);
     }
   };
+
+  useEffect (() => {
+    console.log(user_);
+  },[user_])
   
   const handleFollow = async () => {
     if (!user) return;
     
     try {
-      await toggleFollow(id.toString());
+      // await toggleLike(post.id||0);
       setIsFollowed(!isFollowed);
       setFollowerCount(prev => isFollowed ? prev - 1 : prev + 1);
     } catch (error) {
@@ -61,7 +65,7 @@ export default function UserProfileScreen() {
     if (!user) return;
     
     try {
-      await toggleLike(id.toString());
+      // await toggleLike(post.id||0);
       setIsLiked(!isLiked);
       setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
     } catch (error) {
@@ -100,10 +104,10 @@ export default function UserProfileScreen() {
 
       <View style={styles.statsContainer}>
         <TouchableOpacity onPress={handleFollow}>
-            <Text style={[styles.statLabel,styles.buttonLabel,{color:isFollowed?colors.primary:colors.textSecondary}]}>{isFollowed?"Abonné(e)":"S'abonner"}</Text>
+            <Text style={styles.statLabel}>S'abonner</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={handleLike}>
-            <Text style={[styles.statLabel,styles.buttonLabel,{color:isLiked?colors.primary:colors.textSecondary}]}>{isLiked?"Aimé(e)":"Aimer"}</Text>
+            <Text style={styles.statLabel}>Aimer</Text>
         </TouchableOpacity>
       </View>
 
@@ -182,15 +186,7 @@ export default function UserProfileScreen() {
     },
     statLabel: {
       fontSize: 14,
-      fontWeight:600,
-      color:colors.textSecondary
-    },
-    buttonLabel:{
-      backgroundColor:colors.border,
-      borderRadius:6,
-      width:100,
-      height:20,
-      textAlign:"center"
+      color: colors.textSecondary,
     },
     postsHeader: {
       paddingHorizontal: 20,

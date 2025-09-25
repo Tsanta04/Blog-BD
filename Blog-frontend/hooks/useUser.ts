@@ -80,8 +80,8 @@ export function useUser() {
 
   const toggleLike = async (toLikeId: string) => {
     if (!token) return;
-    const user = users.find(p => p.id === toLikeId);
-    if (!user) return;
+    // const user = users.find(p => p.id === toLikeId);
+    // if (!user) return;
 
     try {
       await like_user({ user_id: toLikeId, liker_id: user?.id || "" }, token.accessToken);
@@ -95,8 +95,8 @@ export function useUser() {
 
   const toggleFollow = async (toFollowId: string) => {
     if (!token) return;
-    const user = users.find(p => p.id === toFollowId);
-    if (!user) return;
+    // const user = users.find(p => p.id === toFollowId);
+    // if (!user) return;
 
     try {
       await follow({ user_id: toFollowId, follower_id: user?.id || "" }, token.accessToken);

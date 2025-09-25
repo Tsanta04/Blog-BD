@@ -7,6 +7,8 @@ export interface User {
   likes?: User[],
   likesCount?:number,
   followers?: User[],
+  isLiked?:boolean,
+  isFollowed?:boolean,
   followersCount?:number
 }
 

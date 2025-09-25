@@ -17,7 +17,7 @@
 
             if (!$userId) 
                 return Response::json(['error' => 'Unauthorized or session expired'], 401);
-            
+
             $callback($userId);
         }
     }

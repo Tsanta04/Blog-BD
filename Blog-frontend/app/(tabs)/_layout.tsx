@@ -100,12 +100,12 @@ export default function TabsLayout() {
         }}
       />
 
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="message"
         options={{
           tabBarIcon: ({ color, size, focused }) => renderTabIcon(MessageCircle, color, size, focused),
         }}
-      />
+      /> */}
 
       <Tabs.Screen
         name="profile"

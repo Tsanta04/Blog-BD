@@ -43,10 +43,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loadStoredAuth = async () => {
     setIsLoading(true);
     try {
-      const storedUser = await AsyncStorage.getItem('user');
       const storedToken = await AsyncStorage.getItem('token');
 
-      // Vérifier la validité du token
       if (storedToken) {
         const authToken: AuthToken = JSON.parse(storedToken);
         const data: User | null = await me(authToken.accessToken);
@@ -61,6 +59,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await AsyncStorage.removeItem('user');
           await AsyncStorage.removeItem('token');
         }
+      } else{
+        setUser(null);
+        setToken(null);        
       }
     } catch (error) {
       console.error('Error loading stored auth:', error);

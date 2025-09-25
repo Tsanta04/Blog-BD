@@ -53,7 +53,7 @@ export default function ProfileScreen() {
         await fetchPosts();
         const st = await fetchPostStat();
         if(st!=undefined && st.length>0)
-          setStat(st)
+          setStat(st||mockedData);
         }
     } catch (error) {
       console.error('Error loading user posts:', error);
