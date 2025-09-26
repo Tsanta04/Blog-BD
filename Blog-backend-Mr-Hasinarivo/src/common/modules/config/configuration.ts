@@ -15,8 +15,5 @@ export default () => {
     refreshToken: process.env.REFRESH_TOKEN,
     stripeSecretKey: process.env.STRIPE_SECRET_KEY,
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-    auth0Domain: process.env.AUTH0_DOMAIN,
-    auth0Audience: process.env.AUTH0_AUDIENCE,
-    auth0ClientId: process.env.AUTH0_CLIENT_ID,
   };
 };

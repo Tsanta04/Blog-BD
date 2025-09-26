@@ -76,28 +76,4 @@ export class AppConfigService {
       }) ?? ' '
     );
   }
-
-  get auth0ClientId(): string {
-    return (
-      this.configService.get<string>('auth0ClientId', {
-        infer: true,
-      }) ?? ' '
-    );
-  }
-
-  get auth0Domain(): string {
-    return (
-      this.configService.get<string>('auth0Domain', {
-        infer: true,
-      }) ?? ' '
-    );
-  }
-
-  get auth0Audience(): string {
-    return (
-      this.configService.get<string>('auth0Audience', {
-        infer: true,
-      }) ?? ' '
-    );
-  }
 }
