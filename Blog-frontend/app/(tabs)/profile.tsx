@@ -46,7 +46,7 @@ export default function ProfileScreen() {
   }, []);
 
   const loadUserPosts = async () => {
-    try {
+    try {      
       if (user) {
         const data = await getUser();
         setUser(data);

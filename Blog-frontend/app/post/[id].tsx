@@ -146,7 +146,7 @@ export default function PostDetailScreen() {
             </Text>
           </TouchableOpacity>
         ) : item.type_id == 4 ? (  
-          <TouchableOpacity onPress={() => router.push(`/pdf/${item.path_name}`)}>
+          <TouchableOpacity>
             <Text style={styles.medialabel}>
               Document: {item.path_name.split("/").pop()}
             </Text>
@@ -156,7 +156,7 @@ export default function PostDetailScreen() {
       }
     </View>
   );
-
+//onPress={() => router.push(`/pdf/${item.path_name}`)}
 
   const styles = StyleSheet.create({
     container: {

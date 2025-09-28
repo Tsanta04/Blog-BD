@@ -49,11 +49,11 @@ class AuthController {
         $token = $this->generateToken();
         $this->redis->setex('session:token:' . $token, $this->getTTL(), $id);
 
-        Response::json([
+        Response::json(['data' => [
             'message' => 'Registered',
             'user' => ['id'=>$id, 'name'=>$u->name, 'email'=>$u->email],
             'token' => ['accessToken'=>$token, 'refreshToken'=>''] // format AuthToken
-        ], 201);
+        ]], 201);
     }
 
     // --- LOGIN ---
@@ -76,10 +76,10 @@ class AuthController {
 
         $this->redis->setex('session:token:' . $token, $this->getTTL(), $user->id);
 
-        Response::json([
+        Response::json(['data' => [
             'user' => ['id'=>$user->id, 'name'=>$user->name, 'email'=>$user->email],
             'token' => ['accessToken'=>$token, 'refreshToken'=>'']
-        ]);
+        ]], 200);
     }
 
     // --- LOGOUT ---
@@ -99,7 +99,7 @@ class AuthController {
     // --- ME ---
     public function me($userId) {
         $user = R::load('users', $userId);
-        Response::json(['user'=>['id'=>$user->id,'name'=>$user->name,'email'=>$user->email]]);
+        Response::json(['data'=>['user'=>['id'=>$user->id,'name'=>$user->name,'email'=>$user->email]]]);
     }
 
     // --- UPDATE USER ---
@@ -118,7 +118,7 @@ class AuthController {
         $user->email = $b['email'];
         R::store($user);
 
-        Response::json(['user'=>['id'=>$user->id,'name'=>$user->name,'email'=>$user->email]]);
+        Response::json(['data'=>['user'=>['id'=>$user->id,'name'=>$user->name,'email'=>$user->email]]]);
     }
 }
 ?>

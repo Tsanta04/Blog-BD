@@ -64,7 +64,7 @@ export default function AddPostScreen() {
     }
 
     setLoading(true);
-    try {
+    try {      
       const newP: Post = ({
         title: title.trim(),
         content: content.trim(),
@@ -73,7 +73,6 @@ export default function AddPostScreen() {
         medias: medias,
         createdAt: new Date().toISOString(),
       });
-      console.log(newP);
       
       const success = await create(newP);
       if(success){

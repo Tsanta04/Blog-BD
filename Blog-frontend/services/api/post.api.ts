@@ -3,21 +3,25 @@ import { baseUrl } from ".";
 
 export const createPost = async (post: Post, token?: string) => {
   try {
+    const bd = JSON.stringify({
+      title: post.title,
+      content: post.content,
+      user_id: post.user_id,
+      medias: JSON.stringify(post.medias),
+      tags: JSON.stringify(post.tags),
+    })
     const response = await fetch(`${baseUrl}/post`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({
-        title: post.title,
-        content: post.content,
-        user_id: post.user_id,
-        medias: JSON.stringify(post.medias),
-        tags: JSON.stringify(post.tags),
-      }),
+      body: bd
     });
 
+    console.log(bd);    
+    console.log(response);
+    
     if (!response.ok) throw new Error("Failed to create post");
     // console.log(await response.text());
     
@@ -137,10 +141,12 @@ export const getAllPosts = async (token?: string) => {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     });
-
+    
     if (!response.ok) throw new Error("Failed to get posts");
     const data = await response.json();
-    return data.data;
+    // console.log(Object.values(data.data));
+    
+    return Object.values(data.data);
   } catch (e: any) {
     console.error("Error getting posts:", e);
     throw new Error(e.response?.data?.message || "Erreur de connexion");

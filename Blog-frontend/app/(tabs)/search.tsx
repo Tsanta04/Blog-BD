@@ -21,7 +21,7 @@ export default function SearchScreen() {
   const {users, searchUsers} = useUser();
 
   const handleSearch = async (searchQuery: string) => {
-    console.log('Search query:', searchQuery);
+    // console.log('Search query:', searchQuery);
     
     if (!searchQuery.trim()) {
       return;

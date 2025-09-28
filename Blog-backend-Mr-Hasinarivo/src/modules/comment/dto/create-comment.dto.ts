@@ -1,8 +1,12 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
 
 export class CreateCommentDto {
-  @ApiProperty({ description: 'Nom du type de cuisine' })
+  @IsString()
   @IsNotEmpty()
-  name: string;
+  content: string;
+
+  // Facultatif : si tu veux lier directement à un post
+  @IsString()
+  @IsNotEmpty()
+  postId: string;
 }

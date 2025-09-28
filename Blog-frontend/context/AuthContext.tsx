@@ -48,7 +48,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (storedToken) {
         const authToken: AuthToken = JSON.parse(storedToken);
         const data: User | null = await me(authToken.accessToken);
-        
         if (data) {
           setUser(data);
           setToken(JSON.parse(storedToken));

@@ -15,6 +15,7 @@ export function usePosts() {
       setLoading(true);
       setError(null);
       const fetchedPosts = await getAllPosts(token?.accessToken);      
+      // console.log(fetchedPosts);
       setPosts(fetchedPosts);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch posts');

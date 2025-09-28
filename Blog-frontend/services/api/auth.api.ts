@@ -13,7 +13,8 @@ export const me = async (accessToken: string) => {
 
     if (!res.ok) return null;
 
-    const data = await res.json();
+    const data = (await res.json()).data;
+    
     return data.user as any; // ou User selon ton type
   } catch (e: any) {
     throw new Error(e?.message || "Erreur de connexion");
@@ -31,7 +32,7 @@ export const logIn = async (email: string, password: string) => {
 
     if (!response.ok) throw new Error("Invalid credentials");
 
-    const data = await response.json();
+    const data = (await response.json()).data;
     return {
       user: data.user,
       token: data.token as { accessToken: string; refreshToken: string },
@@ -52,7 +53,9 @@ export const register = async (name: string, email: string, password: string) =>
 
     if (!response.ok) throw new Error("Invalid credentials");
 
-    const data = await response.json();
+    const data = (await response.json()).data;
+    console.log(data.token);
+    
     return {
       user: data.user,
       token: data.token as { accessToken: string; refreshToken: string },

@@ -20,7 +20,7 @@ export default function RootLayout() {
           <Stack.Screen name="user/[id]" />
           <Stack.Screen name="discussion/[id]" />
           <Stack.Screen name="discussion/message" />
-          <Stack.Screen name="pdf/[id]" />
+          {/* <Stack.Screen name="pdf/[id]" /> */}
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="auto" />
